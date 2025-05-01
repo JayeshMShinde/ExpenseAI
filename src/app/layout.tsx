@@ -1,5 +1,5 @@
 import type {Metadata} from 'next';
-import { GeistSans } from 'geist/font/sans'; // Corrected import name
+import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { cn } from '@/lib/utils';
 
@@ -14,11 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning> {/* Add suppressHydrationWarning */}
+    <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",
-          GeistSans.variable // Use the corrected variable name
+          GeistSans.variable
         )}
        >
         {children}
