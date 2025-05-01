@@ -10,6 +10,7 @@ import type { Transaction, CategorizedTransaction } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardContent } from "@/components/ui/card"; // Import Card components
 
 export default function Home() {
   const [transactions, setTransactions] = useState<CategorizedTransaction[]>([]);
