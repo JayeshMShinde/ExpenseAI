@@ -1,8 +1,8 @@
 'use client';
 
 import type * as React from 'react';
-import { useState } from 'react';
-import { Upload } from 'lucide-react';
+import { useState, useRef } from 'react'; // Import useRef
+import { Upload, FileText, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { parseBankStatement } from '@/services/file-parser';
 import type { Transaction } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Import Card components
 
 interface FileUploadProps {
   onTransactionsParsed: (transactions: Transaction[]) => void;
@@ -23,6 +24,7 @@ export function FileUpload({
   isLoading,
 }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for the file input
   const { toast } = useToast();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,6 +32,10 @@ export function FileUpload({
     if (file) {
       if (file.type === 'text/csv' || file.type === 'application/pdf') {
         setSelectedFile(file);
+         toast({
+           title: 'File Selected',
+           description: `Ready to upload: ${file.name}`,
+         });
       } else {
         toast({
           title: 'Invalid File Type',
@@ -37,10 +43,21 @@ export function FileUpload({
           variant: 'destructive',
         });
         setSelectedFile(null);
-        event.target.value = ''; // Clear the input
+        if (fileInputRef.current) {
+             fileInputRef.current.value = ''; // Clear the input using ref
+         }
       }
+    } else {
+       setSelectedFile(null); // Clear selection if no file chosen
     }
   };
+
+   const clearSelection = () => {
+     setSelectedFile(null);
+     if (fileInputRef.current) {
+       fileInputRef.current.value = ''; // Clear the input using ref
+     }
+   };
 
   const handleUpload = async () => {
     if (!selectedFile) {
@@ -64,49 +81,69 @@ export function FileUpload({
       }));
 
       onTransactionsParsed(transactionsWithIds);
-      toast({
-        title: 'File Processed',
-        description: 'Transactions extracted successfully.',
-      });
-      setSelectedFile(null); // Clear selection after successful upload
-      // Optionally clear the input value if needed, requires getting ref
+       // Clear selection only on successful parse and pass to parent
+       clearSelection();
+       // Toast for success is now handled in the parent component upon receiving transactions
     } catch (error) {
       console.error('Error parsing file:', error);
       toast({
         title: 'Parsing Error',
         description:
-          'Failed to parse the bank statement. Please check the file format.',
+          `Failed to parse ${selectedFile.name}. Please check the file format or try again.`,
         variant: 'destructive',
       });
       onTransactionsParsed([]); // Clear transactions on error
+       // Optionally clear selection on error too, or let user retry
+       // clearSelection();
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
-      <h2 className="text-lg font-semibold">Upload Bank Statement</h2>
-      <div className="grid w-full max-w-sm items-center gap-1.5">
-        <Label htmlFor="bank-statement">Select File (CSV or PDF)</Label>
-        <div className="flex w-full max-w-sm items-center space-x-2">
-          <Input
-            id="bank-statement"
-            type="file"
-            accept=".csv,.pdf"
-            onChange={handleFileChange}
-            disabled={isLoading}
-            className="file:text-foreground"
-          />
-          <Button onClick={handleUpload} disabled={!selectedFile || isLoading}>
-            <Upload className="mr-2 h-4 w-4" />
-            {isLoading ? 'Processing...' : 'Upload'}
-          </Button>
-        </div>
-        {selectedFile && (
-           <p className="text-sm text-muted-foreground">Selected: {selectedFile.name}</p>
-         )}
-      </div>
-    </div>
+    <Card className="shadow-md"> {/* Add shadow */}
+       <CardHeader>
+          <CardTitle>Upload Statement</CardTitle>
+          <CardDescription>Select a CSV or PDF bank statement file.</CardDescription>
+       </CardHeader>
+       <CardContent className="space-y-4">
+         <div className="grid w-full items-center gap-2">
+           <Label htmlFor="bank-statement" className="sr-only"> {/* Hide label visually, still accessible */}
+              Select File (CSV or PDF)
+           </Label>
+           <Input
+             id="bank-statement"
+             type="file"
+             ref={fileInputRef} // Attach ref
+             accept=".csv,.pdf"
+             onChange={handleFileChange}
+             disabled={isLoading}
+             className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer" // Styled input
+           />
+         </div>
+          {selectedFile && (
+            <div className="flex items-center justify-between rounded-md border bg-muted/50 p-3">
+              <div className="flex items-center gap-2 text-sm">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium truncate max-w-[180px]">{selectedFile.name}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                onClick={clearSelection}
+                disabled={isLoading}
+               >
+                 <X className="h-4 w-4" />
+                 <span className="sr-only">Clear selection</span>
+               </Button>
+            </div>
+          )}
+         <Button onClick={handleUpload} disabled={!selectedFile || isLoading} className="w-full">
+           <Upload className="mr-2 h-4 w-4" />
+           {isLoading ? 'Processing...' : 'Upload & Analyze'}
+         </Button>
+       </CardContent>
+    </Card>
   );
 }

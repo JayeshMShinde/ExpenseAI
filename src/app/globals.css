@@ -24,14 +24,14 @@ body {
     --accent-foreground: 0 0% 100%; /* White on Green */
     --destructive: 0 84.2% 60.2%; /* Default Red */
     --destructive-foreground: 0 0% 98%; /* Default Light on Red */
-    --border: 210 40% 91.4%; /* Lighter border */
+    --border: 210 40% 90%; /* Slightly softer border */
     --input: 210 40% 91.4%; /* Lighter input */
     --ring: 210 43% 60%; /* Ring based on Soft Blue */
-    --chart-1: 210 43% 60%; /* Soft Blue */
-    --chart-2: 120 61% 40%; /* Darker Green */
-    --chart-3: 200 50% 50%; /* Another Blue */
-    --chart-4: 40 70% 60%; /* Orange/Yellow */
-    --chart-5: 300 50% 60%; /* Purple */
+    --chart-1: 210 43% 60%; /* Soft Blue - Food */
+    --chart-2: 120 61% 40%; /* Darker Green - Transport */
+    --chart-3: 200 50% 50%; /* Another Blue - Bills */
+    --chart-4: 40 70% 60%; /* Orange/Yellow - Entertainment */
+    --chart-5: 300 50% 60%; /* Purple - Shopping */
     --radius: 0.5rem;
     /* Sidebar variables, adjust if needed */
     --sidebar-background: 210 40% 96%;
@@ -60,7 +60,7 @@ body {
     --accent-foreground: 0 0% 100%; /* White on Dark Green */
     --destructive: 0 62.8% 30.6%; /* Darker Red */
     --destructive-foreground: 0 0% 98%; /* Default Light on Red */
-    --border: 240 3.7% 15.9%; /* Darker border */
+    --border: 240 3.7% 20%; /* Slightly softer border */
     --input: 240 3.7% 15.9%; /* Darker input */
     --ring: 210 43% 40%; /* Ring based on Darker Soft Blue */
     --chart-1: 210 43% 70%; /* Lighter Soft Blue */

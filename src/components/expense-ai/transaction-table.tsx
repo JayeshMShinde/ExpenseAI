@@ -2,7 +2,7 @@
 
 import type * as React from 'react';
 import { useState } from 'react';
-import { Edit2, Save, XCircle, CheckCircle } from 'lucide-react';
+import { Edit2, Save, XCircle, Loader2 } from 'lucide-react'; // Import Loader2
 
 import {
   Table,
@@ -17,12 +17,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { CategorizedTransaction } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 interface TransactionTableProps {
   transactions: CategorizedTransaction[];
   onUpdateCategory: (transactionId: string, newCategory: string) => void;
   loadingCategories: Set<string>; // Track loading state per transaction ID
-  isUpdatingCategory: boolean;
+  isUpdatingCategory: boolean; // Global update state (for disabling inputs)
 }
 
 // Predefined category options (can be expanded)
@@ -38,12 +40,20 @@ export function TransactionTable({
   const [editedCategory, setEditedCategory] = useState<string>('');
 
   const handleEditClick = (transaction: CategorizedTransaction) => {
+    // Prevent editing if already saving another row
+    if (isUpdatingCategory && editingRowId !== transaction.id) return;
     setEditingRowId(transaction.id);
     setEditedCategory(transaction.category || '');
   };
 
   const handleSaveClick = (transactionId: string) => {
-    onUpdateCategory(transactionId, editedCategory);
+    // Prevent saving if category is empty or unchanged (optional)
+    // const originalCategory = transactions.find(tx => tx.id === transactionId)?.category || '';
+    // if (!editedCategory || editedCategory === originalCategory) {
+    //    handleCancelClick();
+    //    return;
+    // }
+    onUpdateCategory(transactionId, editedCategory || 'Other'); // Default to 'Other' if empty
     setEditingRowId(null);
   };
 
@@ -56,90 +66,135 @@ export function TransactionTable({
     setEditedCategory(event.target.value);
   };
 
-  const getCategoryBadgeVariant = (category: string | null): "default" | "secondary" | "destructive" | "outline" => {
-    switch(category?.toLowerCase()) {
-      case 'income': return 'default'; // Using default (primary) for income for visual distinction
-      case 'food': return 'secondary';
-      case 'transport': return 'outline';
-      case 'bills': return 'destructive'; // Use destructive temporarily for visibility
-      case 'entertainment': return 'secondary'; // Needs more distinct variants or colors
-      case 'shopping': return 'outline';
-      default: return 'secondary';
-    }
-  }
+   // More distinct badge variants using background colors from the theme
+   const getCategoryBadgeVariant = (category: string | null): "default" | "secondary" | "destructive" | "outline" | "accent" | "muted" => {
+     switch(category?.toLowerCase()) {
+       case 'income': return 'accent'; // Green for income
+       case 'food': return 'default'; // Using primary (dark) for food
+       case 'transport': return 'secondary'; // Soft blue
+       case 'bills': return 'destructive'; // Red for bills
+       case 'entertainment': return 'outline'; // Outline variant
+       case 'shopping': return 'default'; // Primary again, consider adding more variants/colors if needed
+       case 'other': return 'muted'; // Muted variant
+       default: return 'muted'; // Muted for uncategorized or null
+     }
+   }
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   }
 
+  const formatDate = (dateString: string) => {
+     try {
+       return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+     } catch (e) {
+       return dateString; // Fallback if date is invalid
+     }
+   };
+
+  const isInitialLoading = transactions.length > 0 && transactions.every(tx => tx.category === null) && !isUpdatingCategory;
+
+
   return (
-    <div className="space-y-4 rounded-lg border bg-card p-6 shadow-sm">
-      <h2 className="text-lg font-semibold">Transactions</h2>
-       <ScrollArea className="h-[400px] w-full"> {/* Adjust height as needed */}
+    <Card className="shadow-md"> {/* Add shadow */}
+       <CardHeader>
+          <CardTitle>Transactions</CardTitle>
+       </CardHeader>
+       <CardContent>
+         {/* Set a fixed height for the scroll area */}
+       <ScrollArea className="h-[450px] w-full border rounded-md"> {/* Added border and rounded corners */}
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-card z-10"> {/* Sticky header */}
             <TableRow>
-              <TableHead>Date</TableHead>
+              <TableHead className="w-[100px]">Date</TableHead> {/* Fixed width */}
               <TableHead>Description</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Category</TableHead>
+              <TableHead className="w-[120px] text-right">Amount</TableHead> {/* Fixed width */}
+              <TableHead className="w-[180px]">Category</TableHead> {/* Increased width */}
               <TableHead className="w-[100px] text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.length === 0 ? (
+            {isInitialLoading ? (
+               // Show skeleton rows during initial categorization
+               Array.from({ length: 5 }).map((_, index) => (
+                 <TableRow key={`skeleton-${index}`}>
+                   <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                   <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                   <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                   <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                   <TableCell className="text-center"><Skeleton className="h-7 w-7 mx-auto" /></TableCell>
+                 </TableRow>
+               ))
+             ) : transactions.length === 0 ? (
                <TableRow>
-                 <TableCell colSpan={5} className="text-center text-muted-foreground">
-                   No transactions yet. Upload a statement to get started.
+                 <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    No transactions found.
                  </TableCell>
                </TableRow>
              ) : (
-              transactions.map((transaction) => (
-                <TableRow key={transaction.id} className={loadingCategories.has(transaction.id) ? 'opacity-50' : ''}>
-                  <TableCell>{transaction.date}</TableCell>
-                  <TableCell className="max-w-[200px] truncate">{transaction.description}</TableCell>
-                  <TableCell className={`text-right font-medium ${transaction.amount >= 0 ? 'text-accent-foreground bg-accent/80' : ''}`}>
-                     {formatCurrency(transaction.amount)}
-                   </TableCell>
-                  <TableCell>
-                    {editingRowId === transaction.id ? (
-                      <Input
-                        type="text"
-                        value={editedCategory}
-                        onChange={handleCategoryChange}
-                        list="category-suggestions"
-                        className="h-8"
-                        disabled={isUpdatingCategory}
-                      />
-                    ) : (
-                      <Badge variant={getCategoryBadgeVariant(transaction.category)}>
-                        {transaction.category || 'Uncategorized'}
-                       {loadingCategories.has(transaction.id) && '...'}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {editingRowId === transaction.id ? (
-                      <div className="flex justify-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleSaveClick(transaction.id)} className="h-7 w-7 text-accent" disabled={isUpdatingCategory}>
-                          <Save className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={handleCancelClick} className="h-7 w-7 text-muted-foreground" disabled={isUpdatingCategory}>
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(transaction)} className="h-7 w-7" disabled={isUpdatingCategory || loadingCategories.has(transaction.id)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
+              transactions.map((transaction) => {
+                 const isEditingCurrent = editingRowId === transaction.id;
+                 const isLoadingCurrent = loadingCategories.has(transaction.id);
+                 const isDisabled = isUpdatingCategory && !isEditingCurrent; // Disable other rows while one is saving
+
+                 return (
+                   <TableRow key={transaction.id} className={isLoadingCurrent ? 'opacity-60' : ''} aria-disabled={isDisabled}>
+                     <TableCell className="text-muted-foreground">{formatDate(transaction.date)}</TableCell>
+                     <TableCell className="font-medium max-w-[250px] truncate" title={transaction.description}>{transaction.description}</TableCell>
+                     <TableCell className={`text-right font-mono ${transaction.amount >= 0 ? 'text-green-600' : ''}`}>
+                        {formatCurrency(transaction.amount)}
+                      </TableCell>
+                     <TableCell>
+                       {isEditingCurrent ? (
+                         <Input
+                           type="text"
+                           value={editedCategory}
+                           onChange={handleCategoryChange}
+                           list="category-suggestions"
+                           className="h-8 text-sm" // Smaller input
+                           disabled={isLoadingCurrent} // Disable input while saving this row
+                           autoFocus
+                           onKeyDown={(e) => e.key === 'Enter' && handleSaveClick(transaction.id)} // Save on Enter
+                         />
+                       ) : (
+                         <Badge
+                           variant={getCategoryBadgeVariant(transaction.category)}
+                           className="flex items-center justify-center w-fit" // Ensure badge fits content
+                         >
+                            {/* Show loader inside badge if only this category is loading */}
+                           {isLoadingCurrent && !isUpdatingCategory && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                           {transaction.category || 'Uncategorized'}
+                         </Badge>
+                       )}
+                     </TableCell>
+                     <TableCell className="text-center">
+                       {isEditingCurrent ? (
+                         <div className="flex justify-center gap-1">
+                           <Button variant="ghost" size="icon" onClick={() => handleSaveClick(transaction.id)} className="h-7 w-7 text-green-600 hover:bg-green-100" disabled={isLoadingCurrent}>
+                             {isLoadingCurrent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                             <span className="sr-only">Save</span>
+                           </Button>
+                           <Button variant="ghost" size="icon" onClick={handleCancelClick} className="h-7 w-7 text-muted-foreground hover:bg-gray-100" disabled={isLoadingCurrent}>
+                             <XCircle className="h-4 w-4" />
+                             <span className="sr-only">Cancel</span>
+                           </Button>
+                         </div>
+                       ) : (
+                         <Button variant="ghost" size="icon" onClick={() => handleEditClick(transaction)} className="h-7 w-7" disabled={isDisabled || isLoadingCurrent}>
+                            {/* Show spinner if loading this specific category (even if not editing) */}
+                           {isLoadingCurrent && !isUpdatingCategory ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <Edit2 className="h-4 w-4" />}
+                           <span className="sr-only">Edit</span>
+                         </Button>
+                       )}
+                     </TableCell>
+                   </TableRow>
+                 );
+               })
             )}
           </TableBody>
         </Table>
        </ScrollArea>
+       </CardContent>
 
       {/* Datalist for category suggestions */}
       <datalist id="category-suggestions">
@@ -147,6 +202,9 @@ export function TransactionTable({
           <option key={cat} value={cat} />
         ))}
       </datalist>
-    </div>
+    </Card>
   );
 }
+
+// Custom Badge component to include loading state if needed elsewhere
+// Or modify the existing Badge component if appropriate
