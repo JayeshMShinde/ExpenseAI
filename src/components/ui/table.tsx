@@ -20,7 +20,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, children /* Accept children */, ...props }, ref) => (
-  // Ensure no leading/trailing whitespace inside the thead tag
+  // Ensure no leading/trailing whitespace inside the thead tag - Removed from within component return
   <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props}>{children}</thead>
 ))
 TableHeader.displayName = "TableHeader"
