@@ -108,21 +108,17 @@ const categorizeTransactionsFlow = ai.defineFlow<
 
     console.log("Received from AI:", JSON.stringify(output, null, 2)); // Log output
 
-    // Basic validation: Check if the output is an array and has the same length
-    if (!output || !Array.isArray(output) || output.length !== input.length) {
-       console.error(`AI output mismatch: Expected array of length ${input.length}, but received:`, output);
-       // Throw a more informative error
-       throw new Error(`AI categorization failed: Output format mismatch. Expected ${input.length} category objects, received ${Array.isArray(output) ? output.length : typeof output}.`);
-     }
-
-     // Optional: Further validation to check if each item has a 'category' string
-     const invalidItems = output.filter((item, index) => typeof item?.category !== 'string' || item.category.trim() === '');
-     if (invalidItems.length > 0) {
-        console.error(`AI output mismatch: Some items lack a valid 'category' string or are empty. Invalid items:`, invalidItems);
-        // You could try to salvage valid ones, but throwing is safer for consistency
-        throw new Error(`AI categorization failed: Invalid item format in output at indices: ${output.map((item, index) => typeof item?.category !== 'string' ? index : -1).filter(i => i !== -1).join(', ')}.`);
-     }
-
+    // Ensure the output array has the exact same length as the input array
+    if (!Array.isArray(output)) {
+        console.error(`AI output mismatch: Expected array, but received:`, output);
+        throw new Error(`AI categorization failed: Output format mismatch. Expected an array, received ${typeof output}.`);
+    }
+    if (output.length !== input.length) {
+        console.error(`AI output length mismatch: Expected ${input.length}, received ${output.length}`, output);
+        throw new Error(`AI categorization failed: Output format mismatch. Expected ${input.length} category objects, received ${output.length}.`);
+    }
+    
+        
     // The output structure from the prompt matches the flow's output schema directly now.
     return output;
   }
