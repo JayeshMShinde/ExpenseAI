@@ -29,6 +29,11 @@ export function Header({ selectedCurrency, onCurrencyChange }: HeaderProps) {
     setMounted(true);
   }, []);
 
+  // Theme toggle handler
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/95 px-4 md:px-6 backdrop-blur-sm transition-all">
       {/* Left Section: App Name with enhanced styling */}
@@ -44,20 +49,21 @@ export function Header({ selectedCurrency, onCurrencyChange }: HeaderProps) {
 
       {/* Right Section: Theme Toggle and Currency Selector */}
       <div className="flex items-center gap-2">
-        {/* Theme Toggle */}
+        {/* Theme Toggle - Only render after client-side hydration */}
         {mounted && (
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={toggleTheme}
             className="mr-2"
             aria-label="Toggle theme"
           >
             {theme === "dark" ? (
-              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+              <Sun className="h-[1.2rem] w-[1.2rem] transition-all" />
             ) : (
-              <Moon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+              <Moon className="h-[1.2rem] w-[1.2rem] transition-all" />
             )}
+            <span className="sr-only">Toggle theme</span>
           </Button>
         )}
 
@@ -85,10 +91,10 @@ export function Header({ selectedCurrency, onCurrencyChange }: HeaderProps) {
                 <IndianRupee className="mr-2 h-4 w-4" />
                 INR (₹) - Indian Rupee
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="USD" className="cursor-pointer">
+              {/* <DropdownMenuRadioItem value="USD" className="cursor-pointer">
                 <DollarSign className="mr-2 h-4 w-4" />
                 USD ($) - US Dollar
-              </DropdownMenuRadioItem>
+              </DropdownMenuRadioItem> */}
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
