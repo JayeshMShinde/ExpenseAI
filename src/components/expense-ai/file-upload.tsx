@@ -2,7 +2,7 @@
 
 import type * as React from 'react';
 import { useState, useRef } from 'react'; // Import useRef
-import { Upload, FileText, X } from 'lucide-react';
+import { Upload, FileText, X, Loader2 } from 'lucide-react'; // Import Loader2
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,14 +14,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 interface FileUploadProps {
   onTransactionsParsed: (transactions: Transaction[]) => void;
-  setLoading: (loading: boolean) => void;
-  isLoading: boolean;
+  setLoading: (loading: boolean) => void; // Accept setLoading from parent
+  isLoading: boolean; // Accept isLoading from parent
 }
 
 export function FileUpload({
   onTransactionsParsed,
-  setLoading,
-  isLoading,
+  setLoading, // Use the passed setLoading
+  isLoading, // Use the passed isLoading
 }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for the file input
@@ -69,7 +69,7 @@ export function FileUpload({
       return;
     }
 
-    setLoading(true);
+    setLoading(true); // Indicate start of processing using parent's state setter
     try {
       const fileType = selectedFile.type === 'text/csv' ? 'csv' : 'pdf';
       // Add unique IDs to transactions (simple incrementing for now)
@@ -80,10 +80,10 @@ export function FileUpload({
           id: `tx-${Date.now()}-${counter++}`,
       }));
 
-      onTransactionsParsed(transactionsWithIds);
-       // Clear selection only on successful parse and pass to parent
+      onTransactionsParsed(transactionsWithIds); // Pass parsed data to parent
+       // Clear selection only on successful parse initiation
        clearSelection();
-       // Toast for success is now handled in the parent component upon receiving transactions
+       // Success toast is handled by parent after AI categorization completes
     } catch (error) {
       console.error('Error parsing file:', error);
       toast({
@@ -93,15 +93,15 @@ export function FileUpload({
         variant: 'destructive',
       });
       onTransactionsParsed([]); // Clear transactions on error
+      setLoading(false); // Stop loading on error using parent's setter
        // Optionally clear selection on error too, or let user retry
        // clearSelection();
-    } finally {
-      setLoading(false);
     }
+    // setLoading(false) is now handled in the parent component after AI categorization attempt
   };
 
   return (
-    <Card className="shadow-md"> {/* Add shadow */}
+    <Card className="shadow-md h-full"> {/* Ensure card takes full height */}
        <CardHeader>
           <CardTitle>Upload Statement</CardTitle>
           <CardDescription>Select a CSV or PDF bank statement file.</CardDescription>
@@ -121,7 +121,7 @@ export function FileUpload({
              className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer" // Styled input
            />
          </div>
-          {selectedFile && (
+          {selectedFile && !isLoading && ( // Only show clear selection if not loading
             <div className="flex items-center justify-between rounded-md border bg-muted/50 p-3">
               <div className="flex items-center gap-2 text-sm">
                 <FileText className="h-4 w-4 text-muted-foreground" />
@@ -140,8 +140,17 @@ export function FileUpload({
             </div>
           )}
          <Button onClick={handleUpload} disabled={!selectedFile || isLoading} className="w-full">
-           <Upload className="mr-2 h-4 w-4" />
-           {isLoading ? 'Processing...' : 'Upload & Analyze'}
+           {isLoading ? (
+             <>
+               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+               Processing...
+             </>
+           ) : (
+             <>
+               <Upload className="mr-2 h-4 w-4" />
+               Upload & Analyze
+             </>
+           )}
          </Button>
        </CardContent>
     </Card>

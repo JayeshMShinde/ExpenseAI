@@ -19,12 +19,16 @@ import type { CategorizedTransaction } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Import Card components
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { formatCurrency } from '@/lib/formatting'; // Import the utility function
+import type { CurrencyCode } from '@/app/page'; // Import CurrencyCode type
 
 interface TransactionTableProps {
   transactions: CategorizedTransaction[];
   onUpdateCategory: (transactionId: string, newCategory: string) => void;
   loadingCategories: Set<string>; // Track loading state per transaction ID
   isUpdatingCategory: boolean; // Global update state (for disabling inputs)
+  selectedCurrency: CurrencyCode; // Add currency prop
+  isInitialLoading: boolean; // Add prop for initial loading state
 }
 
 // Predefined category options (can be expanded)
@@ -35,24 +39,22 @@ export function TransactionTable({
   onUpdateCategory,
   loadingCategories,
   isUpdatingCategory,
+  selectedCurrency,
+  isInitialLoading, // Destructure the prop
 }: TransactionTableProps) {
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editedCategory, setEditedCategory] = useState<string>('');
 
   const handleEditClick = (transaction: CategorizedTransaction) => {
-    // Prevent editing if already saving another row
-    if (isUpdatingCategory && editingRowId !== transaction.id) return;
+    // Prevent editing if already saving another row or during initial load
+    if ((isUpdatingCategory && editingRowId !== transaction.id) || isInitialLoading) return;
     setEditingRowId(transaction.id);
     setEditedCategory(transaction.category || '');
   };
 
   const handleSaveClick = (transactionId: string) => {
-    // Prevent saving if category is empty or unchanged (optional)
-    // const originalCategory = transactions.find(tx => tx.id === transactionId)?.category || '';
-    // if (!editedCategory || editedCategory === originalCategory) {
-    //    handleCancelClick();
-    //    return;
-    // }
+    // Prevent saving if initial load is happening
+     if (isInitialLoading) return;
     onUpdateCategory(transactionId, editedCategory || 'Other'); // Default to 'Other' if empty
     setEditingRowId(null);
   };
@@ -80,16 +82,7 @@ export function TransactionTable({
      }
    }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', { // Changed locale to en-IN
-        style: 'currency',
-        currency: 'INR', // Changed currency to INR
-        minimumFractionDigits: 0, // Optional: Adjust based on common Rupee formatting
-        maximumFractionDigits: 2,
-    }).format(amount);
-  }
-
-  const formatDate = (dateString: string) => {
+   const formatDate = (dateString: string) => {
      try {
        return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
      } catch (e) {
@@ -97,24 +90,22 @@ export function TransactionTable({
      }
    };
 
-  const isInitialLoading = transactions.length > 0 && transactions.every(tx => tx.category === null) && !isUpdatingCategory;
-
 
   return (
-    <Card className="shadow-md"> {/* Add shadow */}
+    <Card className="shadow-md">
        <CardHeader>
           <CardTitle>Transactions</CardTitle>
        </CardHeader>
        <CardContent>
          {/* Set a fixed height for the scroll area */}
-       <ScrollArea className="h-[450px] w-full border rounded-md"> {/* Added border and rounded corners */}
+       <ScrollArea className="h-[450px] w-full border rounded-md">
         <Table>
-          <TableHeader className="sticky top-0 bg-card z-10"> {/* Sticky header */}
+          <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
-              <TableHead className="w-[100px]">Date</TableHead> {/* Fixed width */}
+              <TableHead className="w-[100px]">Date</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead className="w-[120px] text-right">Amount</TableHead> {/* Fixed width */}
-              <TableHead className="w-[180px]">Category</TableHead> {/* Increased width */}
+              <TableHead className="w-[120px] text-right">Amount</TableHead>
+              <TableHead className="w-[180px]">Category</TableHead>
               <TableHead className="w-[100px] text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -140,14 +131,15 @@ export function TransactionTable({
               transactions.map((transaction) => {
                  const isEditingCurrent = editingRowId === transaction.id;
                  const isLoadingCurrent = loadingCategories.has(transaction.id);
-                 const isDisabled = isUpdatingCategory && !isEditingCurrent; // Disable other rows while one is saving
+                 // Disable edit/save actions if initial loading, or if another row is being saved
+                 const isDisabled = isInitialLoading || (isUpdatingCategory && !isEditingCurrent);
 
                  return (
                    <TableRow key={transaction.id} className={isLoadingCurrent ? 'opacity-60' : ''} aria-disabled={isDisabled}>
                      <TableCell className="text-muted-foreground">{formatDate(transaction.date)}</TableCell>
                      <TableCell className="font-medium max-w-[250px] truncate" title={transaction.description}>{transaction.description}</TableCell>
                      <TableCell className={`text-right font-mono ${transaction.amount >= 0 ? 'text-green-600 dark:text-green-400' : ''}`}>
-                        {formatCurrency(transaction.amount)}
+                        {formatCurrency(transaction.amount, selectedCurrency)} {/* Use formatter */}
                       </TableCell>
                      <TableCell>
                        {isEditingCurrent ? (
@@ -157,7 +149,7 @@ export function TransactionTable({
                            onChange={handleCategoryChange}
                            list="category-suggestions"
                            className="h-8 text-sm" // Smaller input
-                           disabled={isLoadingCurrent} // Disable input while saving this row
+                           disabled={isLoadingCurrent || isDisabled} // Disable input while saving this row or initial loading
                            autoFocus
                            onKeyDown={(e) => e.key === 'Enter' && handleSaveClick(transaction.id)} // Save on Enter
                          />
@@ -166,7 +158,7 @@ export function TransactionTable({
                            variant={getCategoryBadgeVariant(transaction.category)}
                            className="flex items-center justify-center w-fit" // Ensure badge fits content
                          >
-                            {/* Show loader inside badge if only this category is loading */}
+                            {/* Show loader inside badge if only this category is loading (and not initial load) */}
                            {isLoadingCurrent && !isUpdatingCategory && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
                            {transaction.category || 'Uncategorized'}
                          </Badge>
@@ -175,18 +167,18 @@ export function TransactionTable({
                      <TableCell className="text-center">
                        {isEditingCurrent ? (
                          <div className="flex justify-center gap-1">
-                           <Button variant="ghost" size="icon" onClick={() => handleSaveClick(transaction.id)} className="h-7 w-7 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/50" disabled={isLoadingCurrent}>
+                           <Button variant="ghost" size="icon" onClick={() => handleSaveClick(transaction.id)} className="h-7 w-7 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/50" disabled={isLoadingCurrent || isDisabled}>
                              {isLoadingCurrent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                              <span className="sr-only">Save</span>
                            </Button>
-                           <Button variant="ghost" size="icon" onClick={handleCancelClick} className="h-7 w-7 text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800" disabled={isLoadingCurrent}>
+                           <Button variant="ghost" size="icon" onClick={handleCancelClick} className="h-7 w-7 text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800" disabled={isLoadingCurrent || isDisabled}>
                              <XCircle className="h-4 w-4" />
                              <span className="sr-only">Cancel</span>
                            </Button>
                          </div>
                        ) : (
                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(transaction)} className="h-7 w-7" disabled={isDisabled || isLoadingCurrent}>
-                            {/* Show spinner if loading this specific category (even if not editing) */}
+                            {/* Show spinner if loading this specific category (and not initial load) */}
                            {isLoadingCurrent && !isUpdatingCategory ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <Edit2 className="h-4 w-4" />}
                            <span className="sr-only">Edit</span>
                          </Button>

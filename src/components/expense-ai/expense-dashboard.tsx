@@ -1,7 +1,7 @@
 'use client';
 
 import { BarChart, PieChart } from 'lucide-react';
-import type { BarChartConfig } from 'recharts';
+import type { BarChartConfig } from 'recharts'; // Keep this if specific config type is needed
 import {
   Bar,
   CartesianGrid,
@@ -28,14 +28,18 @@ import {
 import type { CategorizedTransaction, ExpenseSummary } from '@/types';
 import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/formatting'; // Import the utility function
+import type { CurrencyCode } from '@/app/page'; // Import CurrencyCode type
+
 
 interface ExpenseDashboardProps {
   transactions: CategorizedTransaction[];
+  selectedCurrency: CurrencyCode; // Add currency prop
 }
 
 // Define chart colors - Ensure these map to globals.css or define directly
-const chartColors = {
+const chartColors: { [key: string]: string } = {
   Food: "hsl(var(--chart-1))",
   Transport: "hsl(var(--chart-2))",
   Bills: "hsl(var(--chart-3))",
@@ -45,28 +49,41 @@ const chartColors = {
   Other: "hsl(var(--muted))", // Use muted for other
 };
 
-const defaultChartConfig = {
-  total: { label: "Total Expenses" },
-  ...Object.keys(chartColors).reduce((acc, key) => {
-    acc[key] = { label: key, color: chartColors[key] };
-    return acc;
-  }, {} as ChartConfig), // Add index signature to satisfy ChartConfig type
-} satisfies ChartConfig;
+// Dynamically create chart config based on detected categories and colors
+const createChartConfig = (summary: ExpenseSummary[]): ChartConfig => {
+  const config: ChartConfig = {
+    total: { label: "Total Expenses" },
+  };
+  summary.forEach(item => {
+    if (!config[item.category]) {
+      config[item.category] = {
+        label: item.category,
+        color: item.fill,
+      };
+    }
+  });
+   // Add 'Other' if not present but transactions exist
+   if (summary.length > 0 && !config['Other']) {
+      config['Other'] = { label: 'Other', color: chartColors['Other'] };
+   }
+  return config;
+};
 
 
-export function ExpenseDashboard({ transactions }: ExpenseDashboardProps) {
+export function ExpenseDashboard({ transactions, selectedCurrency }: ExpenseDashboardProps) {
 
-   // Determine if transactions are still loading (all categories are null)
+   // Determine if transactions are still loading (any category is null and data exists)
    const isLoading = useMemo(() => {
-     return transactions.length > 0 && transactions.every(tx => tx.category === null);
+     return transactions.length > 0 && transactions.some(tx => tx.category === null);
    }, [transactions]);
 
   const expenseSummary = useMemo((): ExpenseSummary[] => {
-     if (isLoading) return []; // Don't calculate summary while initial loading
+     // Don't calculate summary while initial AI categorization might be running
+     if (isLoading) return [];
 
     const summary: { [key: string]: number } = {};
     transactions.forEach((tx) => {
-      // Only include expenses (negative amounts) and categorized items
+      // Only include expenses (negative amounts)
       if (tx.amount < 0) {
          const category = tx.category || 'Other'; // Default uncategorized to 'Other'
          summary[category] = (summary[category] || 0) + Math.abs(tx.amount);
@@ -87,35 +104,29 @@ export function ExpenseDashboard({ transactions }: ExpenseDashboardProps) {
      return expenseSummary.reduce((sum, item) => sum + item.total, 0);
    }, [expenseSummary, isLoading]);
 
-   const formatCurrency = (value: number) =>
-     new Intl.NumberFormat("en-IN", { // Changed locale to en-IN
-       style: "currency",
-       currency: "INR", // Changed currency to INR
-       minimumFractionDigits: 0, // Optional: Adjust based on common Rupee formatting
-       maximumFractionDigits: 2,
-     }).format(value);
+   const chartConfig = useMemo(() => createChartConfig(expenseSummary), [expenseSummary]);
 
   return (
-    <Card className="shadow-md"> {/* Add shadow */}
+    <Card className="shadow-md h-full"> {/* Ensure card takes full height */}
       <CardHeader>
         <CardTitle>Monthly Expense Dashboard</CardTitle>
          <CardDescription>
             {isLoading ? (
                <Skeleton className="h-5 w-32" /> /* Skeleton for total */
             ) : (
-               `Total Expenses: ${formatCurrency(totalExpenses)}`
+               `Total Expenses: ${formatCurrency(totalExpenses, selectedCurrency)}`
             )}
           </CardDescription>
       </CardHeader>
       <CardContent>
          {isLoading ? (
-             <div className="flex flex-col items-center justify-center h-[240px] space-y-2">
+             <div className="flex flex-col items-center justify-center h-[250px] space-y-2"> {/* Match chart height */}
                <Skeleton className="h-32 w-32 rounded-full" />
                <Skeleton className="h-4 w-48" />
                 <p className="text-sm text-muted-foreground">Categorizing expenses...</p>
              </div>
            ) : expenseSummary.length === 0 ? (
-           <div className="flex flex-col items-center justify-center h-[240px] text-center">
+           <div className="flex flex-col items-center justify-center h-[250px] text-center"> {/* Match chart height */}
               <svg
                  xmlns="http://www.w3.org/2000/svg"
                  width="24"
@@ -145,12 +156,12 @@ export function ExpenseDashboard({ transactions }: ExpenseDashboardProps) {
          ) : (
           <Tabs defaultValue="bar">
             <TabsList className="grid w-full grid-cols-2 mb-4"> {/* Add margin bottom */}
-              <TabsTrigger value="bar"><BarChart className="mr-2 h-4 w-4" />Bar Chart</TabsTrigger>
-              <TabsTrigger value="pie"><PieChart className="mr-2 h-4 w-4" />Pie Chart</TabsTrigger>
+              <TabsTrigger value="bar"><BarChart className="mr-2 h-4 w-4" />Bar</TabsTrigger>
+              <TabsTrigger value="pie"><PieChart className="mr-2 h-4 w-4" />Pie</TabsTrigger>
             </TabsList>
             <TabsContent value="bar">
                {/* Add explicit height for ChartContainer */}
-              <ChartContainer config={defaultChartConfig} className="h-[250px] w-full">
+              <ChartContainer config={chartConfig} className="h-[250px] w-full">
                 <RechartsBarChart
                    accessibilityLayer
                    data={expenseSummary}
@@ -165,17 +176,17 @@ export function ExpenseDashboard({ transactions }: ExpenseDashboardProps) {
                      tickLine={false}
                      tickMargin={10}
                      axisLine={false}
-                     tickFormatter={(value) => defaultChartConfig[value]?.label || value}
+                     tickFormatter={(value) => chartConfig[value]?.label || value}
                      width={80} // Adjust width for labels if needed
                    />
                   <ChartTooltip
                      cursor={false}
-                     content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(value as number)} />} // Format currency in tooltip
+                     content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(value as number, selectedCurrency)} />} // Format currency in tooltip
                    />
                    {/* <RechartsLegend content={<ChartLegendContent />} /> */}
                    <Bar dataKey="total" layout="vertical" radius={4}> {/* Slightly rounded bars */}
                       {expenseSummary.map((entry) => (
-                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={defaultChartConfig[entry.category]?.label} /> // Pass name for tooltip/legend
+                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={chartConfig[entry.category]?.label as string} /> // Pass name for tooltip/legend
                       ))}
                     </Bar>
                 </RechartsBarChart>
@@ -183,11 +194,11 @@ export function ExpenseDashboard({ transactions }: ExpenseDashboardProps) {
              </TabsContent>
              <TabsContent value="pie">
                {/* Add explicit height for ChartContainer */}
-               <ChartContainer config={defaultChartConfig} className="h-[250px] w-full">
+               <ChartContainer config={chartConfig} className="h-[250px] w-full">
                  <RechartsPieChart>
                    <ChartTooltip
                      cursor={false}
-                     content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(value as number)} />} // Format currency in tooltip
+                     content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(value as number, selectedCurrency)} />} // Format currency in tooltip
                    />
                    <Pie
                      data={expenseSummary}
@@ -200,7 +211,7 @@ export function ExpenseDashboard({ transactions }: ExpenseDashboardProps) {
                      endAngle={-270} // Animate clockwise
                    >
                      {expenseSummary.map((entry) => (
-                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={defaultChartConfig[entry.category]?.label} /> // Pass name for tooltip/legend
+                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={chartConfig[entry.category]?.label as string} /> // Pass name for tooltip/legend
                       ))}
                    </Pie>
                    <RechartsLegend

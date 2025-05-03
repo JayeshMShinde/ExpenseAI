@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { Header } from '@/components/expense-ai/header';
 import { FileUpload } from '@/components/expense-ai/file-upload';
 import { TransactionTable } from '@/components/expense-ai/transaction-table';
@@ -10,7 +10,9 @@ import type { Transaction, CategorizedTransaction } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"; // Import Card components
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
+export type CurrencyCode = 'INR' | 'USD';
 
 export default function Home() {
   const [transactions, setTransactions] = useState<CategorizedTransaction[]>([]);
@@ -18,12 +20,14 @@ export default function Home() {
   const [isCategorizing, startCategorizing] = useTransition(); // Transition for AI categorization
   const [isUpdatingCategory, startUpdatingCategory] = useTransition(); // Transition for manual update
   const [loadingCategories, setLoadingCategories] = useState<Set<string>>(new Set()); // Track individual category loading
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('INR'); // State for currency
   const { toast } = useToast();
 
   const handleTransactionsParsed = async (parsedTransactions: Transaction[]) => {
     // Immediately display parsed transactions without category
     const initialCategorized = parsedTransactions.map(tx => ({ ...tx, category: null }));
     setTransactions(initialCategorized);
+    setLoading(true); // Set loading true until categorization finishes or fails
 
     if (parsedTransactions.length > 0) {
       // Start AI categorization in a transition
@@ -31,10 +35,13 @@ export default function Home() {
         const idsToCategorize = new Set(parsedTransactions.map(tx => tx.id));
         setLoadingCategories(prev => new Set([...prev, ...idsToCategorize]));
         try {
-          const categorizedResult = await categorizeTransactions(parsedTransactions);
+          // Prepare data for AI (remove ID)
+          const transactionsForAI = parsedTransactions.map(({ id, ...rest }) => rest);
+          const categorizedResult = await categorizeTransactions(transactionsForAI);
+
+          // Match results back using description, date, amount
           setTransactions(prev =>
             prev.map(tx => {
-              // Robust matching: Check multiple fields
               const categorized = categorizedResult.find(ctx =>
                 ctx.description === tx.description &&
                 ctx.date === tx.date &&
@@ -51,7 +58,7 @@ export default function Home() {
           console.error('Error categorizing transactions:', error);
           toast({
             title: 'Categorization Error',
-            description: 'AI failed to categorize transactions.',
+            description: 'AI failed to categorize transactions. Please try again or categorize manually.',
             variant: 'destructive',
           });
            // Keep initially parsed transactions without categories on error
@@ -62,11 +69,13 @@ export default function Home() {
             idsToCategorize.forEach(id => newSet.delete(id));
             return newSet;
           });
+          setIsLoading(false); // Set loading false after categorization attempt
         }
       });
     } else {
       // If parsing resulted in empty transactions (e.g., error or empty file)
       setTransactions([]);
+      setIsLoading(false); // Set loading false if no transactions found
        toast({
           title: 'No Transactions Found',
           description: 'Could not find transactions in the uploaded file.',
@@ -102,38 +111,45 @@ export default function Home() {
 
   // Derived state to check if any background process is running
   const isProcessing = isLoading || isCategorizing || isUpdatingCategory;
+  const isInitialLoading = isLoading || (isCategorizing && transactions.some(tx => tx.category === null));
 
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/40"> {/* Slightly muted background */}
-      <Header />
-      <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6 md:gap-8 md:p-8"> {/* Increased gaps and padding */}
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      <Header
+        selectedCurrency={selectedCurrency}
+        onCurrencyChange={setSelectedCurrency}
+      />
+      <main className="flex flex-1 flex-col gap-6 p-4 sm:p-6 md:gap-8 md:p-8">
         {/* Top Section: Upload and Dashboard */}
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-5"> {/* Adjusted grid */}
-          <div className="lg:col-span-2"> {/* File Upload takes less space */}
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-5">
+          <div className="lg:col-span-2">
             <FileUpload
               onTransactionsParsed={handleTransactionsParsed}
-              setLoading={setIsLoading}
-              isLoading={isLoading || isCategorizing} // Disable upload during parsing or initial categorization
+              setLoading={setIsLoading} // Pass setLoading to FileUpload
+              isLoading={isProcessing} // Disable upload during any processing
             />
           </div>
-          <div className="lg:col-span-3"> {/* Dashboard takes more space */}
-            <ExpenseDashboard transactions={transactions} />
+          <div className="lg:col-span-3">
+            <ExpenseDashboard
+              transactions={transactions}
+              selectedCurrency={selectedCurrency}
+            />
           </div>
         </div>
 
         {/* Bottom Section: Transaction Table */}
         <div className="grid gap-6">
            {/* Initial Loading Skeleton */}
-           {(isLoading || isCategorizing) && transactions.length === 0 && (
-             <Card className="shadow-md"> {/* Add shadow */}
+           {isInitialLoading && transactions.length === 0 && (
+             <Card className="shadow-md">
                <CardHeader>
-                 <Skeleton className="h-6 w-1/3" /> {/* Slightly larger skeleton */}
+                 <Skeleton className="h-6 w-1/3" />
                </CardHeader>
-               <CardContent className="space-y-3"> {/* Increased spacing */}
-                 <Skeleton className="h-9 w-full" /> {/* Taller skeleton rows */}
+               <CardContent className="space-y-3">
                  <Skeleton className="h-9 w-full" />
-                 <Skeleton className="h-9 w-[80%]" /> {/* Varied width */}
+                 <Skeleton className="h-9 w-full" />
+                 <Skeleton className="h-9 w-[80%]" />
                </CardContent>
              </Card>
            )}
@@ -145,6 +161,8 @@ export default function Home() {
                   onUpdateCategory={handleUpdateCategory}
                   loadingCategories={loadingCategories}
                   isUpdatingCategory={isUpdatingCategory}
+                  selectedCurrency={selectedCurrency}
+                  isInitialLoading={isInitialLoading} // Pass initial loading state
               />
           )}
 
