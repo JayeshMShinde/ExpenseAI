@@ -81,7 +81,12 @@ export function TransactionTable({
    }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return new Intl.NumberFormat('en-IN', { // Changed locale to en-IN
+        style: 'currency',
+        currency: 'INR', // Changed currency to INR
+        minimumFractionDigits: 0, // Optional: Adjust based on common Rupee formatting
+        maximumFractionDigits: 2,
+    }).format(amount);
   }
 
   const formatDate = (dateString: string) => {
@@ -141,7 +146,7 @@ export function TransactionTable({
                    <TableRow key={transaction.id} className={isLoadingCurrent ? 'opacity-60' : ''} aria-disabled={isDisabled}>
                      <TableCell className="text-muted-foreground">{formatDate(transaction.date)}</TableCell>
                      <TableCell className="font-medium max-w-[250px] truncate" title={transaction.description}>{transaction.description}</TableCell>
-                     <TableCell className={`text-right font-mono ${transaction.amount >= 0 ? 'text-green-600' : ''}`}>
+                     <TableCell className={`text-right font-mono ${transaction.amount >= 0 ? 'text-green-600 dark:text-green-400' : ''}`}>
                         {formatCurrency(transaction.amount)}
                       </TableCell>
                      <TableCell>
@@ -170,11 +175,11 @@ export function TransactionTable({
                      <TableCell className="text-center">
                        {isEditingCurrent ? (
                          <div className="flex justify-center gap-1">
-                           <Button variant="ghost" size="icon" onClick={() => handleSaveClick(transaction.id)} className="h-7 w-7 text-green-600 hover:bg-green-100" disabled={isLoadingCurrent}>
+                           <Button variant="ghost" size="icon" onClick={() => handleSaveClick(transaction.id)} className="h-7 w-7 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/50" disabled={isLoadingCurrent}>
                              {isLoadingCurrent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                              <span className="sr-only">Save</span>
                            </Button>
-                           <Button variant="ghost" size="icon" onClick={handleCancelClick} className="h-7 w-7 text-muted-foreground hover:bg-gray-100" disabled={isLoadingCurrent}>
+                           <Button variant="ghost" size="icon" onClick={handleCancelClick} className="h-7 w-7 text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800" disabled={isLoadingCurrent}>
                              <XCircle className="h-4 w-4" />
                              <span className="sr-only">Cancel</span>
                            </Button>
@@ -205,6 +210,3 @@ export function TransactionTable({
     </Card>
   );
 }
-
-// Custom Badge component to include loading state if needed elsewhere
-// Or modify the existing Badge component if appropriate

@@ -88,9 +88,11 @@ export function ExpenseDashboard({ transactions }: ExpenseDashboardProps) {
    }, [expenseSummary, isLoading]);
 
    const formatCurrency = (value: number) =>
-     new Intl.NumberFormat("en-US", {
+     new Intl.NumberFormat("en-IN", { // Changed locale to en-IN
        style: "currency",
-       currency: "USD",
+       currency: "INR", // Changed currency to INR
+       minimumFractionDigits: 0, // Optional: Adjust based on common Rupee formatting
+       maximumFractionDigits: 2,
      }).format(value);
 
   return (
