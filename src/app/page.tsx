@@ -10,7 +10,7 @@ import type { Transaction, CategorizedTransaction } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Make sure Card components are imported
 import { FileSpreadsheet, Calendar as CalendarIcon } from 'lucide-react';
 import { parseISO, format } from 'date-fns'; // Removed getMonth, getYear as format is sufficient
 import {
@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 export type CurrencyCode = 'INR' | 'USD';
 
 const ALL_MONTHS_VALUE = "all"; // Constant for the "All Months" option
+const DEFAULT_CATEGORY = 'Other'; // Define default category
 
 export default function Home() {
   const [transactions, setTransactions] = useState<CategorizedTransaction[]>([]);
@@ -45,11 +46,16 @@ export default function Home() {
     const uniqueMonths = new Set<string>();
     txs.forEach(tx => {
       try {
+         // Validate date format before parsing
+         if (!tx.date || !/^\d{4}-\d{2}-\d{2}$/.test(tx.date)) {
+             console.warn(`Invalid or missing date format for transaction: ${tx.description}, date: ${tx.date}`);
+             return; // Skip this transaction for month calculation
+         }
         const date = parseISO(tx.date);
         const monthYear = format(date, 'yyyy-MM'); // Format as YYYY-MM for sorting
         uniqueMonths.add(monthYear);
       } catch (e) {
-        console.error(`Invalid date format for transaction: ${tx.description}`, e);
+        console.error(`Error parsing date for transaction: ${tx.description}, date: ${tx.date}`, e);
       }
     });
 
@@ -80,49 +86,51 @@ export default function Home() {
       setLoadingCategories(prev => new Set([...prev, ...idsToCategorize]));
 
       startCategorizing(async () => {
+        let successfulCategorizationCount = 0;
+        let failedCategorizationCount = 0;
         try {
           // Prepare data for AI (remove ID and initial null category)
           const transactionsForAI = transactionsWithIds.map(({ id, category, ...rest }) => rest);
-          console.log("Sending transactions to AI:", transactionsForAI); // Log data being sent
+          console.log(`Sending ${transactionsForAI.length} transactions to AI...`); // Log data being sent
 
           const categorizedResult = await categorizeTransactions(transactionsForAI);
-          console.log("Received categorized results:", categorizedResult); // Log results received
+          console.log(`Received ${categorizedResult.length} categorized results from AI.`); // Log results received
 
-          // Validate AI response length BEFORE mapping
-          if (categorizedResult.length !== transactionsWithIds.length) {
-            console.error(`AI result length mismatch: Expected ${transactionsWithIds.length}, got ${categorizedResult.length}`);
-            throw new Error(`AI categorization failed: Received ${categorizedResult.length} results for ${transactionsWithIds.length} transactions.`);
-          }
-
-          // Map results back using index - assuming AI returns in the same order
+          // Even if AI returns different length (handled in flow), map based on original input
           setTransactions(prev =>
             prev.map((tx, index) => {
-              // Ensure the result at the index is valid before assigning
-              const categoryResult = categorizedResult[index]?.category;
-              if (typeof categoryResult === 'string' && categoryResult.trim() !== '') {
-                return { ...tx, category: categoryResult };
+              // Get the category from AI result if it exists at this index, otherwise keep null
+              const aiCategory = categorizedResult[index]?.category;
+              // Assign DEFAULT_CATEGORY ('Other') if AI returns null, undefined, or empty string
+              const finalCategory = aiCategory || DEFAULT_CATEGORY;
+
+              if (aiCategory) {
+                successfulCategorizationCount++;
               } else {
-                 console.warn(`Invalid or missing category for transaction index ${index}. Keeping original.`);
-                 // Keep original tx with potentially null category if AI result is invalid for this index
-                 return tx;
+                 failedCategorizationCount++; // Count if AI provided null/undefined/empty
               }
+
+              return { ...tx, category: finalCategory };
             })
           );
 
           toast({
-             title: 'AI Categorization Complete',
-             description: `${transactionsWithIds.length} transactions categorized.`,
-             variant: 'default', // Use default (or success if added)
+             title: 'AI Categorization Attempt Complete',
+             description: `${successfulCategorizationCount} transactions categorized successfully. ${failedCategorizationCount > 0 ? `${failedCategorizationCount} defaulted to '${DEFAULT_CATEGORY}'.` : ''}`,
+             variant: failedCategorizationCount > 0 ? 'default' : 'default', // Use default for both success and partial success
           });
         } catch (error) {
-          console.error('Error during AI categorization:', error);
+          console.error('Error during AI categorization call:', error);
           toast({
             title: 'AI Categorization Error',
-            description: error instanceof Error ? error.message : 'AI failed to categorize. Please categorize manually or check logs.',
+            description: `AI call failed: ${error instanceof Error ? error.message : 'Unknown error'}. Defaulting all to '${DEFAULT_CATEGORY}'.`,
             variant: 'destructive',
           });
-           // On error, keep initially parsed transactions with null categories
-           // Ensure state isn't cleared - it already holds transactionsWithIds
+           // On critical error, set all categories to 'Other'
+           setTransactions(prev =>
+            prev.map(tx => ({ ...tx, category: DEFAULT_CATEGORY }))
+           );
+           failedCategorizationCount = transactionsWithIds.length; // All failed in this case
         } finally {
           setLoadingCategories(prev => {
             const newSet = new Set(prev);
@@ -130,6 +138,7 @@ export default function Home() {
             return newSet;
           });
           setIsLoading(false); // Indicate overall initial process finished (AI attempted/completed)
+           console.log(`Categorization Summary: Success=${successfulCategorizationCount}, Defaulted=${failedCategorizationCount}`);
         }
       });
     } else {
@@ -152,7 +161,7 @@ export default function Home() {
        // For immediate UI update:
        setTransactions((prevTransactions) =>
          prevTransactions.map((tx) =>
-           tx.id === transactionId ? { ...tx, category: newCategory || 'Other' } : tx // Default to 'Other' if cleared
+           tx.id === transactionId ? { ...tx, category: newCategory || DEFAULT_CATEGORY } : tx // Default to 'Other' if cleared
          )
        );
        setLoadingCategories(prev => {
@@ -162,7 +171,7 @@ export default function Home() {
          });
        toast({
          title: "Category Updated",
-         description: `Transaction category set to ${newCategory || 'Other'}.`,
+         description: `Transaction category set to ${newCategory || DEFAULT_CATEGORY}.`,
          variant: 'default' // Or 'accent' for green
        });
 
@@ -171,7 +180,7 @@ export default function Home() {
        setTimeout(() => {
           setTransactions((prevTransactions) =>
              prevTransactions.map((tx) =>
-               tx.id === transactionId ? { ...tx, category: newCategory || 'Other' } : tx
+               tx.id === transactionId ? { ...tx, category: newCategory || DEFAULT_CATEGORY } : tx
              )
            );
            setLoadingCategories(prev => {
@@ -181,7 +190,7 @@ export default function Home() {
              });
           toast({
              title: "Category Updated",
-             description: `Transaction category set to ${newCategory || 'Other'}.`,
+             description: `Transaction category set to ${newCategory || DEFAULT_CATEGORY}.`,
              variant: 'default' // Or 'accent'
            });
        }, 300); // 300ms simulated delay
@@ -197,7 +206,7 @@ export default function Home() {
     return transactions.filter(tx => {
       try {
         // Ensure date is valid before formatting
-        if (!tx.date) return false;
+        if (!tx.date || !/^\d{4}-\d{2}-\d{2}$/.test(tx.date)) return false; // Validate format
         const date = parseISO(tx.date);
         return format(date, 'yyyy-MM') === selectedMonth;
       } catch(e) {
@@ -214,8 +223,12 @@ export default function Home() {
   // Determine if the table should show the initial loading state (skeletons)
   // Show skeletons only when:
   // 1. Overall loading is true (parsing done, AI might be running)
-  // 2. AND Either the AI is actively categorizing OR the transactions array still has items with null categories (AI hasn't finished/failed yet)
-  const isInitialLoading = isLoading && (isCategorizing || transactions.some(tx => tx.category === null));
+  // 2. AND Either the AI is actively categorizing OR the transactions array still has items with null categories (AI hasn't finished/failed yet AND we haven't defaulted them)
+   // Updated logic: Show skeleton only during the very initial file parse + AI categorization phase.
+   // isLoading covers the file parsing and the initial AI call trigger.
+   // isCategorizing covers the actual AI processing time via useTransition.
+   const isInitialLoading = isLoading || (isCategorizing && transactions.length > 0);
+
 
   // Show empty state only if NOT processing AND transactions array is empty
   const showEmptyState = !isProcessing && transactions.length === 0;
@@ -258,7 +271,7 @@ export default function Home() {
               transactions={filteredTransactions} // Pass filtered data
               selectedCurrency={selectedCurrency}
               // Show loading in dashboard during initial AI run OR if still parsing file
-              isLoading={isInitialLoading || isLoading}
+              isLoading={isInitialLoading} // Pass the refined initial loading state
               selectedMonthDisplay={formatDisplayMonth(selectedMonth)} // Pass display month
             />
           </div>
@@ -267,11 +280,14 @@ export default function Home() {
          {/* Filters Section - Only show if transactions exist AND not in initial loading state */}
          {transactions.length > 0 && !isInitialLoading && (
             <Card className="shadow-sm bg-card">
-                <CardContent className="flex flex-wrap items-center gap-4 p-4">
+                 <CardHeader className="pb-2 pt-4 px-4"> {/* Adjust padding */}
+                   <CardTitle className="text-base font-semibold">Filters</CardTitle> {/* Smaller title */}
+                 </CardHeader>
+                <CardContent className="flex flex-wrap items-center gap-4 p-4 pt-2"> {/* Adjust padding */}
                  <div className="flex items-center gap-2">
                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                     <Label htmlFor="month-filter" className="text-sm font-medium">
-                        Filter by Month:
+                        Month:
                      </Label>
                      <Select
                         value={selectedMonth}
@@ -293,6 +309,24 @@ export default function Home() {
                      </Select>
                   </div>
                   {/* Add more filters here in the future if needed */}
+                  {/* Example: Category Filter (requires additional state) */}
+                  {/*
+                  <div className="flex items-center gap-2">
+                     <Filter className="h-4 w-4 text-muted-foreground" />
+                     <Label htmlFor="category-filter" className="text-sm font-medium">Category:</Label>
+                     <Select disabled={isProcessing}> // Add state and handler
+                        <SelectTrigger id="category-filter" className="w-[150px] h-9 text-sm">
+                           <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           <SelectItem value="all">All Categories</SelectItem>
+                           // Populate with actual categories dynamically
+                           <SelectItem value="food">Food</SelectItem>
+                           <SelectItem value="transport">Transport</SelectItem>
+                        </SelectContent>
+                     </Select>
+                  </div>
+                  */}
                 </CardContent>
             </Card>
          )}
