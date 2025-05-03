@@ -12,7 +12,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileSpreadsheet, Calendar as CalendarIcon } from 'lucide-react';
-import { getMonth, getYear, parseISO, format } from 'date-fns';
+import { parseISO, format } from 'date-fns'; // Removed getMonth, getYear as format is sufficient
 import {
   Select,
   SelectContent,
@@ -59,7 +59,7 @@ export default function Home() {
 
   const handleTransactionsParsed = async (parsedTransactions: Transaction[]) => {
     // Ensure unique IDs are generated robustly
-    const transactionsWithIds = parsedTransactions.map((tx, index) => ({
+    const transactionsWithIds: CategorizedTransaction[] = parsedTransactions.map((tx, index) => ({
         ...tx,
         category: null, // Initialize category as null
         // Use a more robust ID generation strategy
@@ -81,45 +81,55 @@ export default function Home() {
 
       startCategorizing(async () => {
         try {
-          // Prepare data for AI (remove ID if the flow doesn't expect it)
-          const transactionsForAI = transactionsWithIds.map(({ id, category, ...rest }) => rest); // Exclude id and initial null category
-          const categorizedResult = await categorizeTransactions(transactionsForAI);
+          // Prepare data for AI (remove ID and initial null category)
+          const transactionsForAI = transactionsWithIds.map(({ id, category, ...rest }) => rest);
+          console.log("Sending transactions to AI:", transactionsForAI); // Log data being sent
 
-          // Match results back using description, date, amount
+          const categorizedResult = await categorizeTransactions(transactionsForAI);
+          console.log("Received categorized results:", categorizedResult); // Log results received
+
+          // Validate AI response length BEFORE mapping
+          if (categorizedResult.length !== transactionsWithIds.length) {
+            console.error(`AI result length mismatch: Expected ${transactionsWithIds.length}, got ${categorizedResult.length}`);
+            throw new Error(`AI categorization failed: Received ${categorizedResult.length} results for ${transactionsWithIds.length} transactions.`);
+          }
+
+          // Map results back using index - assuming AI returns in the same order
           setTransactions(prev =>
-            prev.map(tx => {
-              // Find the matching categorized transaction from AI result
-              const categorized = categorizedResult.find(ctx =>
-                ctx.description === tx.description &&
-                ctx.date === tx.date && // Ensure date format matches if necessary
-                ctx.amount === tx.amount
-                // Add more matching criteria if needed for robustness
-              );
-               // Return the original transaction merged with the category if found, otherwise return original
-              return categorized ? { ...tx, category: categorized.category } : tx;
+            prev.map((tx, index) => {
+              // Ensure the result at the index is valid before assigning
+              const categoryResult = categorizedResult[index]?.category;
+              if (typeof categoryResult === 'string' && categoryResult.trim() !== '') {
+                return { ...tx, category: categoryResult };
+              } else {
+                 console.warn(`Invalid or missing category for transaction index ${index}. Keeping original.`);
+                 // Keep original tx with potentially null category if AI result is invalid for this index
+                 return tx;
+              }
             })
           );
+
           toast({
              title: 'AI Categorization Complete',
-             description: 'Transactions have been categorized.',
+             description: `${transactionsWithIds.length} transactions categorized.`,
+             variant: 'default', // Use default (or success if added)
           });
         } catch (error) {
-          console.error('Error categorizing transactions:', error);
+          console.error('Error during AI categorization:', error);
           toast({
-            title: 'Categorization Error',
-            description: 'AI failed to categorize transactions. Please categorize manually.',
+            title: 'AI Categorization Error',
+            description: error instanceof Error ? error.message : 'AI failed to categorize. Please categorize manually or check logs.',
             variant: 'destructive',
           });
-           // Keep initially parsed transactions with null categories on error
-           // State already has transactionsWithIds, ensure it's not cleared
-           // setTransactions(transactionsWithIds); // No need to set again if it was set at the beginning
+           // On error, keep initially parsed transactions with null categories
+           // Ensure state isn't cleared - it already holds transactionsWithIds
         } finally {
           setLoadingCategories(prev => {
             const newSet = new Set(prev);
             idsToCategorize.forEach(id => newSet.delete(id));
             return newSet;
           });
-          setIsLoading(false); // Indicate overall initial process finished (AI attempted)
+          setIsLoading(false); // Indicate overall initial process finished (AI attempted/completed)
         }
       });
     } else {
@@ -138,11 +148,30 @@ export default function Home() {
   const handleUpdateCategory = (transactionId: string, newCategory: string) => {
      startUpdatingCategory(() => {
        setLoadingCategories(prev => new Set(prev).add(transactionId));
-       // Simulate API call delay for feedback
+       // Simulate API call delay for feedback (optional, remove if not needed)
+       // For immediate UI update:
+       setTransactions((prevTransactions) =>
+         prevTransactions.map((tx) =>
+           tx.id === transactionId ? { ...tx, category: newCategory || 'Other' } : tx // Default to 'Other' if cleared
+         )
+       );
+       setLoadingCategories(prev => {
+           const newSet = new Set(prev);
+           newSet.delete(transactionId);
+           return newSet;
+         });
+       toast({
+         title: "Category Updated",
+         description: `Transaction category set to ${newCategory || 'Other'}.`,
+         variant: 'default' // Or 'accent' for green
+       });
+
+       // If simulating delay:
+       /*
        setTimeout(() => {
           setTransactions((prevTransactions) =>
              prevTransactions.map((tx) =>
-               tx.id === transactionId ? { ...tx, category: newCategory } : tx
+               tx.id === transactionId ? { ...tx, category: newCategory || 'Other' } : tx
              )
            );
            setLoadingCategories(prev => {
@@ -152,10 +181,11 @@ export default function Home() {
              });
           toast({
              title: "Category Updated",
-             description: `Transaction category set to ${newCategory}.`,
-             variant: 'default'
+             description: `Transaction category set to ${newCategory || 'Other'}.`,
+             variant: 'default' // Or 'accent'
            });
        }, 300); // 300ms simulated delay
+       */
      });
   };
 
@@ -166,27 +196,28 @@ export default function Home() {
     }
     return transactions.filter(tx => {
       try {
+        // Ensure date is valid before formatting
+        if (!tx.date) return false;
         const date = parseISO(tx.date);
         return format(date, 'yyyy-MM') === selectedMonth;
-      } catch {
+      } catch(e) {
+        console.warn(`Invalid date during filtering: ${tx.date} for tx: ${tx.description}`);
         return false; // Ignore transactions with invalid dates during filtering
       }
     });
   }, [transactions, selectedMonth]);
 
 
-  // Derived state to check if any background process is running
-  const isProcessingFile = isLoading && !isCategorizing && transactions.length > 0 && transactions.some(tx => tx.category === null); // File parsed, initial AI hasn't started/finished
-  const isProcessingAI = isCategorizing; // When AI categorization is running
-  const isProcessingUpdate = isUpdatingCategory; // When manual update is running
-
   // Combined loading state for disabling interactions or showing general loading indicators
-  const isProcessing = isLoading || isProcessingAI || isProcessingUpdate;
+  const isProcessing = isLoading || isCategorizing || isUpdatingCategory;
 
   // Determine if the table should show the initial loading state (skeletons)
-  // Show initial loading only if loading AND the selected filter is 'All' (or no months yet) AND some categories are null
-  const isInitialLoading = isLoading && selectedMonth === ALL_MONTHS_VALUE && transactions.length > 0 && transactions.some(tx => tx.category === null);
+  // Show skeletons only when:
+  // 1. Overall loading is true (parsing done, AI might be running)
+  // 2. AND Either the AI is actively categorizing OR the transactions array still has items with null categories (AI hasn't finished/failed yet)
+  const isInitialLoading = isLoading && (isCategorizing || transactions.some(tx => tx.category === null));
 
+  // Show empty state only if NOT processing AND transactions array is empty
   const showEmptyState = !isProcessing && transactions.length === 0;
 
   // Format month for display (e.g., "July 2024")
@@ -194,7 +225,11 @@ export default function Home() {
     if (monthYear === ALL_MONTHS_VALUE) return "All Months";
     try {
        const [year, month] = monthYear.split('-');
+       // Ensure year and month are valid numbers
+       if (isNaN(parseInt(year)) || isNaN(parseInt(month))) return monthYear;
        const date = new Date(parseInt(year), parseInt(month) - 1);
+       // Check if the created date is valid
+       if (isNaN(date.getTime())) return monthYear;
        return format(date, 'MMMM yyyy');
     } catch {
        return monthYear; // Fallback
@@ -222,14 +257,15 @@ export default function Home() {
             <ExpenseDashboard
               transactions={filteredTransactions} // Pass filtered data
               selectedCurrency={selectedCurrency}
-              isLoading={isInitialLoading || isProcessingAI} // Show loading in dashboard during initial AI run
+              // Show loading in dashboard during initial AI run OR if still parsing file
+              isLoading={isInitialLoading || isLoading}
               selectedMonthDisplay={formatDisplayMonth(selectedMonth)} // Pass display month
             />
           </div>
         </div>
 
-         {/* Filters Section - Only show if transactions exist */}
-         {transactions.length > 0 && (
+         {/* Filters Section - Only show if transactions exist AND not in initial loading state */}
+         {transactions.length > 0 && !isInitialLoading && (
             <Card className="shadow-sm bg-card">
                 <CardContent className="flex flex-wrap items-center gap-4 p-4">
                  <div className="flex items-center gap-2">
@@ -240,6 +276,7 @@ export default function Home() {
                      <Select
                         value={selectedMonth}
                         onValueChange={setSelectedMonth}
+                        // Disable if only 'All Months' is available or processing
                         disabled={availableMonths.length === 0 || isProcessing}
                      >
                         <SelectTrigger id="month-filter" className="w-[180px] h-9 text-sm">
@@ -263,17 +300,18 @@ export default function Home() {
 
         {/* Bottom Section: Transaction Table */}
         <div className="grid gap-6">
-           {/* Show Table Card wrapper always if not initial empty state */}
+           {/* Show Table Card wrapper unless it's the initial empty state */}
           {!showEmptyState ? (
               <TransactionTable
                   transactions={filteredTransactions} // Pass filtered data
                   onUpdateCategory={handleUpdateCategory}
                   loadingCategories={loadingCategories}
-                  isUpdatingCategory={isUpdatingCategory} // Pass the transition state
+                  isUpdatingCategory={isUpdatingCategory} // Pass the transition state for saving
                   selectedCurrency={selectedCurrency}
-                  // Show loading skeletons only during initial AI categorization for 'All Months'
+                  // isInitialLoading controls the skeleton display inside the table
                   isInitialLoading={isInitialLoading}
-                  isRowSaving={isProcessingUpdate || isProcessingAI} // Indicate if any save/AI process is running
+                  // isRowSaving indicates if any row save or the main AI process is running
+                  isRowSaving={isUpdatingCategory || isCategorizing}
               />
            ) : (
               // Initial Empty State - Prompt to upload
