@@ -105,12 +105,12 @@ export function TransactionTable({
        <CardContent>
        <ScrollArea className="h-[450px] w-full border rounded-md">
         <Table>
-          <TableHeader className="sticky top-0 bg-card z-10"> {/* Make header sticky */}
+          <TableHeader className="sticky top-0 bg-card z-10">
             <TableRow>
-              <TableHead className="w-[120px]">Date</TableHead> {/* Wider date */}
+              <TableHead className="w-[120px]">Date</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead className="w-[140px] text-right">Amount</TableHead> {/* Wider amount */}
-              <TableHead className="w-[200px]">Category</TableHead> {/* Wider category */}
+              <TableHead className="w-[140px] text-right">Amount</TableHead>
+              <TableHead className="w-[200px]">Category</TableHead>
               <TableHead className="w-[100px] text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
