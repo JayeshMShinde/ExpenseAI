@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart, PieChart, Activity } from 'lucide-react';
+import { BarChart, PieChart, Activity, TrendingUp, ArrowDown } from 'lucide-react'; // Added icons
 import {
   Bar,
   CartesianGrid,
@@ -15,7 +15,7 @@ import {
   PieChart as RechartsPieChart,
 } from 'recharts';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import {
   ChartConfig,
   ChartContainer,
@@ -31,26 +31,24 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/lib/formatting';
 import type { CurrencyCode } from '@/app/page';
 
-
 interface ExpenseDashboardProps {
   transactions: CategorizedTransaction[];
   selectedCurrency: CurrencyCode;
-  isLoading: boolean; // Loading state for initial AI categorization
-  selectedMonthDisplay: string; // Display text for the selected month (e.g., "July 2024" or "All Months")
+  isLoading: boolean;
+  selectedMonthDisplay: string;
 }
 
-// Define chart colors - Ensure these map to globals.css or define directly
+// Enhanced chart colors with richer hues
 const chartColors: { [key: string]: string } = {
   Food: "hsl(var(--chart-1))",
   Transport: "hsl(var(--chart-2))",
   Bills: "hsl(var(--chart-3))",
   Entertainment: "hsl(var(--chart-4))",
   Shopping: "hsl(var(--chart-5))",
-  Income: "hsl(var(--accent))", // Use accent for income
-  Other: "hsl(var(--muted))", // Use muted for other
+  Income: "hsl(var(--accent))",
+  Other: "hsl(var(--muted))",
 };
 
-// Dynamically create chart config based on detected categories and colors
 const createChartConfig = (summary: ExpenseSummary[]): ChartConfig => {
   const config: ChartConfig = {
     total: { label: "Total Expenses" },
@@ -63,28 +61,20 @@ const createChartConfig = (summary: ExpenseSummary[]): ChartConfig => {
       };
     }
   });
-   // Add 'Other' if not present but expenses exist
-   if (summary.length > 0 && !config['Other']) {
-      config['Other'] = { label: 'Other', color: chartColors['Other'] };
-   }
+  if (summary.length > 0 && !config['Other']) {
+    config['Other'] = { label: 'Other', color: chartColors['Other'] };
+  }
   return config;
 };
 
-
 export function ExpenseDashboard({ transactions, selectedCurrency, isLoading, selectedMonthDisplay }: ExpenseDashboardProps) {
-
+  // Calculate expense summary
   const expenseSummary = useMemo((): ExpenseSummary[] => {
-     // Don't calculate summary while initial AI categorization might be running
-     // isLoading specifically refers to the initial AI load now
-     // if (isLoading) return []; // Keep this if you want charts blank during initial AI load
-
     const summary: { [key: string]: number } = {};
     transactions.forEach((tx) => {
-      // Only include expenses (negative amounts)
       if (tx.amount < 0) {
-         // Default uncategorized to 'Other', or skip if category is null and you only want categorized data
-         const category = tx.category || 'Other';
-         summary[category] = (summary[category] || 0) + Math.abs(tx.amount);
+        const category = tx.category || 'Other';
+        summary[category] = (summary[category] || 0) + Math.abs(tx.amount);
       }
     });
 
@@ -92,129 +82,236 @@ export function ExpenseDashboard({ transactions, selectedCurrency, isLoading, se
       .map(([category, total]) => ({
         category,
         total,
-        fill: chartColors[category] || chartColors['Other'], // Assign color
+        fill: chartColors[category] || chartColors['Other'],
       }))
-      .sort((a, b) => b.total - a.total); // Sort descending by total
-  }, [transactions]); // Recalculate whenever filtered transactions change
+      .sort((a, b) => b.total - a.total);
+  }, [transactions]);
 
-   const totalExpenses = useMemo(() => {
-     // Recalculate total based on the current (potentially filtered) transactions
-     return expenseSummary.reduce((sum, item) => sum + item.total, 0);
-   }, [expenseSummary]);
+  const totalExpenses = useMemo(() => {
+    return expenseSummary.reduce((sum, item) => sum + item.total, 0);
+  }, [expenseSummary]);
 
-   const chartConfig = useMemo(() => createChartConfig(expenseSummary), [expenseSummary]);
+  // Find top expense category and percentage
+  const topCategory = useMemo(() => {
+    if (expenseSummary.length === 0) return null;
+    const top = expenseSummary[0];
+    const percentage = (top.total / totalExpenses) * 100;
+    return {
+      name: top.category,
+      percentage: Math.round(percentage),
+      fill: top.fill
+    };
+  }, [expenseSummary, totalExpenses]);
 
-   const chartHeight = "280px"; // Define chart height once
+  // Calculate income summary
+  const incomeSummary = useMemo(() => {
+    const income = transactions
+      .filter(tx => tx.amount > 0)
+      .reduce((total, tx) => total + tx.amount, 0);
+    
+    return {
+      total: income,
+      net: income - totalExpenses
+    };
+  }, [transactions, totalExpenses]);
+
+  const chartConfig = useMemo(() => createChartConfig(expenseSummary), [expenseSummary]);
+  const chartHeight = "280px";
 
   return (
-    <Card className="shadow-md h-full bg-card">
-      <CardHeader>
-        <CardTitle className="text-xl">Expense Dashboard</CardTitle>
-         <CardDescription>
-           {/* Show month context first, then loading or total */}
-            <span className="font-medium">{selectedMonthDisplay}: </span>
-            {isLoading ? ( // Show loading indicator during initial AI categorization
-               <span className="italic text-muted-foreground">Analyzing...</span>
-            ) : (
-               `Total Expenses: ${formatCurrency(totalExpenses, selectedCurrency)}`
-            )}
-          </CardDescription>
+    <Card className="shadow-md h-full bg-gradient-to-br from-card to-card/95 border-border/80 hover:shadow-lg transition-all duration-300">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl font-semibold flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            Expense Analytics
+          </CardTitle>
+          
+          <div className="bg-secondary/70 px-3 py-1 rounded-full text-sm font-medium">
+            {selectedMonthDisplay}
+          </div>
+        </div>
+        
+        <CardDescription className="flex gap-6 mt-2">
+          {isLoading ? (
+            <span className="italic text-muted-foreground flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Analyzing data...
+            </span>
+          ) : (
+            <>
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Total Expenses</span>
+                <span className="font-semibold text-destructive">
+                  {formatCurrency(totalExpenses, selectedCurrency)}
+                </span>
+              </div>
+              
+              {incomeSummary.total > 0 && (
+                <>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Total Income</span>
+                    <span className="font-semibold text-accent">
+                      {formatCurrency(incomeSummary.total, selectedCurrency)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Net Balance</span>
+                    <span className={`font-semibold ${incomeSummary.net >= 0 ? 'text-emerald-500' : 'text-destructive'}`}>
+                      {formatCurrency(incomeSummary.net, selectedCurrency)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </CardDescription>
       </CardHeader>
+      
       <CardContent className="pt-2">
-         {isLoading ? ( // Show loading skeleton only when initially loading (AI categorization)
-             <div className={`flex flex-col items-center justify-center h-[${chartHeight}] space-y-3`}>
-               <Skeleton className="h-36 w-36 rounded-full" />
-               <Skeleton className="h-4 w-48" />
-               <p className="text-sm text-muted-foreground pt-1">Categorizing expenses...</p>
-             </div>
-           ) : transactions.filter(tx => tx.amount < 0).length === 0 ? ( // Check if filtered transactions have any expenses
-           <div className={`flex flex-col items-center justify-center h-[${chartHeight}] text-center`}>
-              <Activity
-                 className="h-12 w-12 text-muted-foreground opacity-30 mb-4"
-                 strokeWidth={1.5}
-               />
-               <p className="text-muted-foreground font-medium">
-                 No expense data for {selectedMonthDisplay}.
-               </p>
-                <p className="text-sm text-muted-foreground/80 mt-1">
-                  Check the selected month or upload a statement with expenses.
-                </p>
+        {isLoading ? (
+          <div className={`flex flex-col items-center justify-center h-[${chartHeight}] space-y-3`}>
+            <div className="relative">
+              <Skeleton className="h-36 w-36 rounded-full" />
+              <Skeleton className="h-36 w-36 rounded-full absolute top-0 left-0 animate-pulse opacity-50" />
             </div>
-         ) : (
-          <Tabs defaultValue="bar">
-            <TabsList className="grid w-full grid-cols-2 mb-5">
-              <TabsTrigger value="bar"><BarChart className="mr-2 h-4 w-4" />Bar Chart</TabsTrigger>
-              <TabsTrigger value="pie"><PieChart className="mr-2 h-4 w-4" />Pie Chart</TabsTrigger>
+            <Skeleton className="h-4 w-48" />
+            <p className="text-sm text-muted-foreground pt-1">Categorizing your transactions...</p>
+          </div>
+        ) : transactions.filter(tx => tx.amount < 0).length === 0 ? (
+          <div className={`flex flex-col items-center justify-center h-[${chartHeight}] text-center`}>
+            <div className="bg-muted/30 p-5 rounded-full mb-4">
+              <Activity className="h-12 w-12 text-muted-foreground opacity-30" strokeWidth={1.5} />
+            </div>
+            <p className="text-muted-foreground font-medium">
+              No expense data for {selectedMonthDisplay}.
+            </p>
+            <p className="text-sm text-muted-foreground/80 mt-1">
+              Check the selected month or upload a statement with expenses.
+            </p>
+          </div>
+        ) : (
+          <Tabs defaultValue="pie" className="mt-1">
+            <TabsList className="grid w-full grid-cols-2 mb-5 bg-muted/60 p-1">
+              <TabsTrigger value="pie" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <PieChart className="mr-2 h-4 w-4" />
+                Pie Chart
+              </TabsTrigger>
+              <TabsTrigger value="bar" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <BarChart className="mr-2 h-4 w-4" />
+                Bar Chart
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="bar">
+            
+            <TabsContent value="pie" className="mt-0">
+              <ChartContainer config={chartConfig} className={`h-[${chartHeight}] w-full`}>
+                <RechartsPieChart>
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent 
+                      hideLabel 
+                      formatter={(value, name) => `${chartConfig[name]?.label}: ${formatCurrency(value as number, selectedCurrency)}`} 
+                    />}
+                  />
+                  <Pie
+                    data={expenseSummary}
+                    dataKey="total"
+                    nameKey="category"
+                    innerRadius={65}
+                    outerRadius={90}
+                    paddingAngle={3}
+                    strokeWidth={2}
+                    stroke="rgba(255,255,255,0.15)"
+                    startAngle={90}
+                    endAngle={-270}
+                    animationDuration={800}
+                  >
+                    {expenseSummary.map((entry) => (
+                      <Cell key={`cell-${entry.category}`} fill={entry.fill} name={entry.category} />
+                    ))}
+                  </Pie>
+                  <RechartsLegend
+                    content={<ChartLegendContent 
+                      nameKey="category" 
+                      className="text-xs flex-wrap justify-center gap-x-4 gap-y-2"
+                    />}
+                    verticalAlign="bottom"
+                    wrapperStyle={{ paddingTop: '15px', paddingBottom: '0px' }}
+                  />
+                </RechartsPieChart>
+              </ChartContainer>
+            </TabsContent>
+            
+            <TabsContent value="bar" className="mt-0">
               <ChartContainer config={chartConfig} className={`h-[${chartHeight}] w-full`}>
                 <RechartsBarChart
-                   accessibilityLayer
-                   data={expenseSummary}
-                   layout="vertical"
-                   margin={{ left: 0, right: 30, top: 5, bottom: 10 }}
+                  accessibilityLayer
+                  data={expenseSummary}
+                  layout="vertical"
+                  margin={{ left: 0, right: 30, top: 5, bottom: 10 }}
+                  barGap={4}
+                  animationDuration={800}
                 >
-                   <CartesianGrid horizontal={false} strokeDasharray="2 3" opacity={0.5} />
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.4} />
                   <XAxis type="number" dataKey="total" hide />
                   <YAxis
-                     dataKey="category"
-                     type="category"
-                     tickLine={false}
-                     tickMargin={8}
-                     axisLine={false}
-                     tickFormatter={(value) => {
-                       const label = chartConfig[value]?.label || value;
-                       // Truncate long labels
-                       const displayLabel = typeof label === 'string' ? (label.length > 12 ? label.substring(0, 12) + '…' : label) : label;
-                       return displayLabel;
-                     }}
-                     width={90} // Increased width slightly for potentially longer truncated labels
-                   />
+                    dataKey="category"
+                    type="category"
+                    tickLine={false}
+                    tickMargin={8}
+                    axisLine={false}
+                    tickFormatter={(value) => {
+                      const label = chartConfig[value]?.label || value;
+                      const displayLabel = typeof label === 'string' ? (label.length > 12 ? label.substring(0, 12) + '…' : label) : label;
+                      return displayLabel;
+                    }}
+                    width={95}
+                    fontSize={12}
+                  />
                   <ChartTooltip
-                     cursor={false}
-                     content={<ChartTooltipContent hideLabel formatter={(value, name) => `${chartConfig[name]?.label}: ${formatCurrency(value as number, selectedCurrency)}`} />}
-                   />
-                   <Bar dataKey="total" layout="vertical" radius={4}>
-                      {expenseSummary.map((entry) => (
-                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={entry.category} />
-                      ))}
-                    </Bar>
+                    cursor={{ fill: 'var(--primary-5)', opacity: 0.1 }}
+                    content={<ChartTooltipContent 
+                      hideLabel 
+                      formatter={(value, name) => `${chartConfig[name]?.label}: ${formatCurrency(value as number, selectedCurrency)}`} 
+                    />}
+                  />
+                  <Bar 
+                    dataKey="total" 
+                    layout="vertical" 
+                    radius={[0, 4, 4, 0]}
+                    isAnimationActive={true}
+                  >
+                    {expenseSummary.map((entry) => (
+                      <Cell key={`cell-${entry.category}`} fill={entry.fill} name={entry.category} />
+                    ))}
+                  </Bar>
                 </RechartsBarChart>
               </ChartContainer>
-             </TabsContent>
-             <TabsContent value="pie">
-               <ChartContainer config={chartConfig} className={`h-[${chartHeight}] w-full`}>
-                 <RechartsPieChart>
-                   <ChartTooltip
-                     cursor={false}
-                      content={<ChartTooltipContent hideLabel formatter={(value, name) => `${chartConfig[name]?.label}: ${formatCurrency(value as number, selectedCurrency)}`} />}
-                   />
-                   <Pie
-                     data={expenseSummary}
-                     dataKey="total"
-                     nameKey="category"
-                     innerRadius={60}
-                     outerRadius={90}
-                     paddingAngle={2}
-                     strokeWidth={1}
-                     startAngle={90}
-                     endAngle={-270}
-                   >
-                     {expenseSummary.map((entry) => (
-                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={entry.category} stroke={entry.fill} />
-                      ))}
-                   </Pie>
-                   <RechartsLegend
-                     content={<ChartLegendContent nameKey="category" className="text-xs flex-wrap justify-center gap-x-4 gap-y-1"/>}
-                     verticalAlign="bottom"
-                     wrapperStyle={{ paddingTop: '15px', paddingBottom: '0px' }}
-                    />
-                 </RechartsPieChart>
-               </ChartContainer>
-             </TabsContent>
-           </Tabs>
-         )}
+            </TabsContent>
+          </Tabs>
+        )}
       </CardContent>
+      
+      {!isLoading && topCategory && transactions.filter(tx => tx.amount < 0).length > 0 && (
+        <CardFooter className="pt-0 pb-4 px-6">
+          <div className="w-full bg-muted/30 rounded-lg p-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full p-2" style={{ backgroundColor: `${topCategory.fill}25` }}>
+                <ArrowDown className="h-5 w-5" style={{ color: topCategory.fill }} />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Top Expense Category</p>
+                <p className="font-medium">{topCategory.name}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Percentage of Spending</p>
+              <p className="font-semibold text-lg">{topCategory.percentage}%</p>
+            </div>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 }

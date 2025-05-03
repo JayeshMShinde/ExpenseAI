@@ -1,5 +1,7 @@
-import type { CurrencyCode } from '@/app/page'; // Import CurrencyCode type
-import { Banknote, IndianRupee, DollarSign } from 'lucide-react';
+'use client';
+
+import type { CurrencyCode } from '@/app/page';
+import { Banknote, IndianRupee, DollarSign, Moon, Sun } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
+import { useState, useEffect } from "react";
 
 interface HeaderProps {
   selectedCurrency: CurrencyCode;
@@ -17,23 +21,58 @@ interface HeaderProps {
 }
 
 export function Header({ selectedCurrency, onCurrencyChange }: HeaderProps) {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure hydration mismatch doesn't occur
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background px-4 md:px-6">
-      {/* Left Section: App Name */}
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b bg-background/95 px-4 md:px-6 backdrop-blur-sm transition-all">
+      {/* Left Section: App Name with enhanced styling */}
       <div className="flex items-center gap-2">
-        <Banknote className="h-6 w-6 text-primary" />
-        <span className="font-bold text-lg">ExpenseAI</span>
+        <div className="bg-primary/10 p-2 rounded-full">
+          <Banknote className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex flex-col">
+          <span className="font-bold text-lg gradient-text">ExpenseAI</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline-block">Smart Financial Insights</span>
+        </div>
       </div>
 
-      {/* Right Section: Currency Selector */}
-      <div>
+      {/* Right Section: Theme Toggle and Currency Selector */}
+      <div className="flex items-center gap-2">
+        {/* Theme Toggle */}
+        {mounted && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="mr-2"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? (
+              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+            ) : (
+              <Moon className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all" />
+            )}
+          </Button>
+        )}
+
+        {/* Currency Selector with enhanced styling */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="w-20 justify-start">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-20 justify-start hover-lift"
+            >
               {selectedCurrency === 'INR' ? (
-                <IndianRupee className="mr-2 h-4 w-4" />
+                <IndianRupee className="mr-2 h-4 w-4 text-primary" />
               ) : (
-                <DollarSign className="mr-2 h-4 w-4" />
+                <DollarSign className="mr-2 h-4 w-4 text-primary" />
               )}
               {selectedCurrency}
             </Button>
@@ -42,11 +81,11 @@ export function Header({ selectedCurrency, onCurrencyChange }: HeaderProps) {
             <DropdownMenuLabel>Select Currency</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuRadioGroup value={selectedCurrency} onValueChange={(value) => onCurrencyChange(value as CurrencyCode)}>
-              <DropdownMenuRadioItem value="INR">
+              <DropdownMenuRadioItem value="INR" className="cursor-pointer">
                 <IndianRupee className="mr-2 h-4 w-4" />
                 INR (₹) - Indian Rupee
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="USD">
+              <DropdownMenuRadioItem value="USD" className="cursor-pointer">
                 <DollarSign className="mr-2 h-4 w-4" />
                 USD ($) - US Dollar
               </DropdownMenuRadioItem>

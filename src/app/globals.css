@@ -1,91 +1,97 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-body {
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-}
-
+ 
 @layer base {
   :root {
-    /* Professional Cool Palette (Light) */
-    --background: 210 20% 98%; /* Very Light Cool Gray */
-    --foreground: 220 15% 25%; /* Dark Slate Blue/Gray */
-    --card: 210 20% 98%; /* Match Background */
-    --card-foreground: 220 15% 25%; /* Match Foreground */
-    --popover: 210 20% 98%; /* Match Background */
-    --popover-foreground: 220 15% 25%; /* Match Foreground */
-    --primary: 220 60% 55%; /* Medium Professional Blue */
-    --primary-foreground: 210 40% 98%; /* Light Gray for contrast */
-    --secondary: 210 30% 90%; /* Light Cool Gray */
-    --secondary-foreground: 220 15% 25%; /* Dark text for contrast */
-    --muted: 210 20% 94%; /* Slightly Darker Gray */
-    --muted-foreground: 220 10% 55%; /* Mid Gray */
-    --accent: 145 55% 45%; /* Muted Green */
-    --accent-foreground: 0 0% 100%; /* White */
-    --destructive: 0 84% 60%; /* Standard Red */
-    --destructive-foreground: 0 0% 98%; /* Light */
-    --border: 210 20% 88%; /* Subtle Border */
-    --input: 210 20% 92%; /* Slightly off background */
-    --ring: 220 60% 65%; /* Based on Primary */
-
-    /* Chart Colors (Light) */
-    --chart-1: 220 60% 55%; /* Primary Blue */
-    --chart-2: 145 55% 45%; /* Accent Green */
-    --chart-3: 170 50% 45%; /* Teal */
-    --chart-4: 35 70% 55%;  /* Orange/Yellow */
-    --chart-5: 260 50% 60%; /* Purple */
-
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 167 75% 38%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 243 75% 59%;
     --radius: 0.5rem;
-
-    /* Sidebar variables - Using main theme colors for consistency */
-    --sidebar-background: hsl(var(--muted)); /* Use muted for sidebar bg */
-    --sidebar-foreground: hsl(var(--muted-foreground)); /* Use muted-foreground */
-    --sidebar-primary: hsl(var(--primary)); /* Use primary */
-    --sidebar-primary-foreground: hsl(var(--primary-foreground)); /* Use primary-foreground */
-    --sidebar-accent: hsl(var(--secondary)); /* Use secondary for accent areas */
-    --sidebar-accent-foreground: hsl(var(--secondary-foreground)); /* Use secondary-foreground */
-    --sidebar-border: hsl(var(--border)); /* Use border */
-    --sidebar-ring: hsl(var(--ring)); /* Use ring */
+    
+    /* Chart colors */
+    --chart-1: 243 75% 59%;
+    --chart-2: 220 70% 60%; 
+    --chart-3: 340 82% 52%;
+    --chart-4: 45 93% 47%;
+    --chart-5: 167 75% 38%;
+    --chart-gradient-from: 243 75% 59%;
+    --chart-gradient-to: 243 75% 80%;
   }
+ 
   .dark {
-     /* Professional Cool Palette (Dark) */
-    --background: 220 15% 10%; /* Dark Slate */
-    --foreground: 210 20% 95%; /* Light Gray */
-    --card: 220 15% 15%; /* Slightly Lighter Dark */
-    --card-foreground: 210 20% 95%; /* Light Gray */
-    --popover: 220 15% 15%; /* Match Card */
-    --popover-foreground: 210 20% 95%; /* Light Gray */
-    --primary: 220 70% 75%; /* Lighter Blue */
-    --primary-foreground: 220 15% 15%; /* Dark Text */
-    --secondary: 210 20% 30%; /* Darker Muted Blue/Gray */
-    --secondary-foreground: 210 20% 95%; /* Light Gray */
-    --muted: 220 15% 20%; /* Darker Gray */
-    --muted-foreground: 210 15% 65%; /* Lighter Mid-Gray */
-    --accent: 145 60% 60%; /* Brighter Green */
-    --accent-foreground: 145 90% 10%; /* Dark Text */
-    --destructive: 0 70% 65%; /* Lighter Red */
-    --destructive-foreground: 0 100% 10%; /* Dark Text */
-    --border: 210 15% 25%; /* Dark Subtle Border */
-    --input: 220 15% 18%; /* Darker than Card */
-    --ring: 220 70% 80%; /* Lighter Primary Blue */
+    --background: 224 71.4% 4.1%;
+    --foreground: 210 20% 98%;
+    --card: 224 71.4% 4.1%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 243 75% 59%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 27.9% 16.9%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 27.9% 16.9%;
+    --muted-foreground: 217.9 10.6% 64.9%;
+    --accent: 167 75% 38%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 27.9% 16.9%;
+    --input: 215 27.9% 16.9%;
+    --ring: 243 75% 59%;
+    
+    /* Chart colors - slightly brighter for dark mode */
+    --chart-1: 243 75% 65%;
+    --chart-2: 220 70% 65%;
+    --chart-3: 340 82% 65%;
+    --chart-4: 45 93% 65%;
+    --chart-5: 167 75% 50%;
+    --chart-gradient-from: 243 75% 65%;
+    --chart-gradient-to: 243 75% 80%;
+  }
 
-    /* Chart Colors (Dark) */
-    --chart-1: 220 70% 75%; /* Lighter Blue */
-    --chart-2: 145 60% 60%; /* Brighter Green */
-    --chart-3: 170 60% 60%; /* Lighter Teal */
-    --chart-4: 35 80% 65%;  /* Lighter Orange/Yellow */
-    --chart-5: 260 60% 70%; /* Lighter Purple */
+  /* Custom animations */
+  @keyframes glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
 
-    /* Sidebar variables - Using main theme colors for consistency */
-    --sidebar-background: hsl(var(--muted)); /* Use muted for sidebar bg */
-    --sidebar-foreground: hsl(var(--muted-foreground)); /* Use muted-foreground */
-    --sidebar-primary: hsl(var(--primary)); /* Use primary */
-    --sidebar-primary-foreground: hsl(var(--primary-foreground)); /* Use primary-foreground */
-    --sidebar-accent: hsl(var(--secondary)); /* Use secondary for accent areas */
-    --sidebar-accent-foreground: hsl(var(--secondary-foreground)); /* Use secondary-foreground */
-    --sidebar-border: hsl(var(--border)); /* Use border */
-    --sidebar-ring: hsl(var(--ring)); /* Use ring */
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  /* Custom card hover effects */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Custom background pattern */
+  .bg-pattern {
+    background-image: 
+      linear-gradient(to right, rgba(var(--primary)/0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(var(--primary)/0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
   }
 }
 
@@ -94,6 +100,54 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground;
   }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted/50 rounded;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded hover:bg-muted-foreground/50 transition-colors;
+}
+
+/* Enhanced chart tooltip styling */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  @apply bg-popover/95 border border-border shadow-lg backdrop-blur-sm !important;
+  @apply rounded-lg py-2 px-3 !important;
+}
+
+/* Transaction table row hover effect */
+.transaction-row {
+  @apply transition-colors duration-150;
+}
+
+.transaction-row:hover:not([aria-disabled="true"]) {
+  @apply bg-muted/40;
+}
+
+/* Badge animations */
+.badge-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Gradient text for important elements */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
 }
