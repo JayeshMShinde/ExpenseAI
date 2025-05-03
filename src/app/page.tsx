@@ -10,15 +10,15 @@ import type { Transaction, CategorizedTransaction } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"; // Ensure CardDescription is imported
-import { Upload } from 'lucide-react'; // Import Upload icon
+import { Card, CardContent } from "@/components/ui/card"; // Keep CardContent
+import { FileSpreadsheet } from 'lucide-react'; // Changed Icon for empty state
 
 export type CurrencyCode = 'INR' | 'USD';
 
 export default function Home() {
   const [transactions, setTransactions] = useState<CategorizedTransaction[]>([]);
-  const [isLoading, setIsLoading] = useState(false); // Loading state for file parsing AND initial categorization
-  const [isCategorizing, startCategorizing] = useTransition(); // Transition for AI categorization
+  const [isLoading, setIsLoading] = useState(false); // General loading (file parsing + initial AI)
+  const [isCategorizing, startCategorizing] = useTransition(); // Transition for AI categorization specifically
   const [isUpdatingCategory, startUpdatingCategory] = useTransition(); // Transition for manual update
   const [loadingCategories, setLoadingCategories] = useState<Set<string>>(new Set()); // Track individual category loading
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('INR'); // State for currency
@@ -26,17 +26,17 @@ export default function Home() {
 
   const handleTransactionsParsed = async (parsedTransactions: Transaction[]) => {
     // Immediately display parsed transactions without category
-    const initialCategorized = parsedTransactions.map(tx => ({ ...tx, category: null }));
+    const initialCategorized = parsedTransactions.map(tx => ({ ...tx, category: null, id: tx.id || `tx-${Date.now()}-${Math.random()}` })); // Ensure IDs are present
     setTransactions(initialCategorized);
-    setIsLoading(true); // Set loading true until categorization finishes or fails
+    setIsLoading(true); // Indicate overall process started (parsing done, AI starting)
 
     if (parsedTransactions.length > 0) {
-      // Start AI categorization in a transition
+      const idsToCategorize = new Set(initialCategorized.map(tx => tx.id));
+      setLoadingCategories(prev => new Set([...prev, ...idsToCategorize]));
+
       startCategorizing(async () => {
-        const idsToCategorize = new Set(parsedTransactions.map(tx => tx.id));
-        setLoadingCategories(prev => new Set([...prev, ...idsToCategorize]));
         try {
-          // Prepare data for AI (remove ID)
+          // Prepare data for AI (remove ID if the flow doesn't expect it)
           const transactionsForAI = parsedTransactions.map(({ id, ...rest }) => rest);
           const categorizedResult = await categorizeTransactions(transactionsForAI);
 
@@ -59,34 +59,32 @@ export default function Home() {
           console.error('Error categorizing transactions:', error);
           toast({
             title: 'Categorization Error',
-            description: 'AI failed to categorize transactions. Please try again or categorize manually.',
+            description: 'AI failed to categorize transactions. Please categorize manually.',
             variant: 'destructive',
           });
-           // Keep initially parsed transactions without categories on error
-           // We don't need to setTransactions(initialCategorized) again, as it's already the state
+           // Keep initially parsed transactions with null categories on error
+           setTransactions(initialCategorized); // Ensure state remains the initial set
         } finally {
           setLoadingCategories(prev => {
             const newSet = new Set(prev);
             idsToCategorize.forEach(id => newSet.delete(id));
             return newSet;
           });
-          setIsLoading(false); // Set loading false after categorization attempt completes
+          setIsLoading(false); // Indicate overall initial process finished (AI attempted)
         }
       });
     } else {
-      // If parsing resulted in empty transactions (e.g., error or empty file)
-      setTransactions([]);
-      setIsLoading(false); // Set loading false if no transactions found
+      setTransactions([]); // Clear transactions if parsing yields nothing
+      setIsLoading(false); // Stop loading if no transactions
        toast({
           title: 'No Transactions Found',
           description: 'Could not find transactions in the uploaded file.',
-          variant: 'destructive', // Or 'default' depending on desired severity
+          variant: 'default',
        });
     }
   };
 
-  const handleUpdateCategory = (transactionId: string, newCategory: string) => {
-     // Start manual update in a transition
+ const handleUpdateCategory = (transactionId: string, newCategory: string) => {
      startUpdatingCategory(() => {
        setLoadingCategories(prev => new Set(prev).add(transactionId));
        // Simulate API call delay for feedback
@@ -111,19 +109,21 @@ export default function Home() {
   };
 
   // Derived state to check if any background process is running
-  const isProcessingFile = isLoading && transactions.length === 0; // When file upload component shows spinner
+  const isProcessingFile = isLoading && !isCategorizing && transactions.length > 0 && transactions.some(tx => tx.category === null); // File parsed, initial AI hasn't started/finished
   const isProcessingAI = isCategorizing; // When AI categorization is running
   const isProcessingUpdate = isUpdatingCategory; // When manual update is running
 
   // Combined loading state for disabling interactions or showing general loading indicators
-  const isProcessing = isProcessingFile || isProcessingAI || isProcessingUpdate;
+  const isProcessing = isLoading || isProcessingAI || isProcessingUpdate;
 
   // Determine if the table should show the initial loading state (skeletons)
-  const isInitialLoading = isLoading && transactions.some(tx => tx.category === null);
+  const isInitialLoading = isLoading && transactions.length > 0 && transactions.some(tx => tx.category === null);
+
+  const showEmptyState = !isProcessing && transactions.length === 0;
 
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted/10"> {/* Slightly lighter background */}
+    <div className="flex min-h-screen w-full flex-col bg-background"> {/* Use standard background */}
       <Header
         selectedCurrency={selectedCurrency}
         onCurrencyChange={setSelectedCurrency}
@@ -134,7 +134,7 @@ export default function Home() {
           <div className="lg:col-span-2">
             <FileUpload
               onTransactionsParsed={handleTransactionsParsed}
-              setIsLoading={setIsLoading} // Pass setIsLoading to FileUpload
+              setIsLoading={setIsLoading}
               isLoading={isProcessing} // Disable upload during any processing
             />
           </div>
@@ -142,7 +142,7 @@ export default function Home() {
             <ExpenseDashboard
               transactions={transactions}
               selectedCurrency={selectedCurrency}
-              isLoading={isInitialLoading} // Pass loading state to dashboard
+              isLoading={isInitialLoading || isProcessingAI} // Show loading in dashboard during initial AI run
             />
           </div>
         </div>
@@ -150,7 +150,7 @@ export default function Home() {
         {/* Bottom Section: Transaction Table */}
         <div className="grid gap-6">
            {/* Show Table Card wrapper always if not initial empty state */}
-          {transactions.length > 0 || isProcessing ? (
+          {!showEmptyState ? (
               <TransactionTable
                   transactions={transactions}
                   onUpdateCategory={handleUpdateCategory}
@@ -162,13 +162,13 @@ export default function Home() {
               />
            ) : (
               // Initial Empty State - Prompt to upload
-              <Card className="shadow-sm border-dashed border-muted-foreground/30"> {/* Dashed border for empty state */}
+              <Card className="shadow-sm border-dashed border-border/50 bg-card"> {/* Dashed border, subtle bg */}
                  <CardContent className="flex flex-col items-center justify-center p-10 gap-4 min-h-[300px]"> {/* Min height */}
-                    <Upload className="h-16 w-16 text-muted-foreground/50 mb-2" strokeWidth={1.5}/>
-                    <p className="text-lg font-medium text-center text-muted-foreground">
+                    <FileSpreadsheet className="h-16 w-16 text-muted-foreground/40 mb-3" strokeWidth={1.25}/>
+                    <p className="text-lg font-medium text-center text-foreground">
                       Ready to analyze your expenses?
                     </p>
-                    <p className="text-sm text-center text-muted-foreground/80">
+                    <p className="text-sm text-center text-muted-foreground">
                        Upload your bank statement (CSV or PDF) using the panel above to get started.
                     </p>
                   </CardContent>

@@ -1,7 +1,6 @@
 'use client';
 
-import { BarChart, PieChart } from 'lucide-react';
-import type { BarChartConfig } from 'recharts'; // Keep this if specific config type is needed
+import { BarChart, PieChart, Activity } from 'lucide-react'; // Added Activity icon for empty state
 import {
   Bar,
   CartesianGrid,
@@ -36,6 +35,7 @@ import type { CurrencyCode } from '@/app/page'; // Import CurrencyCode type
 interface ExpenseDashboardProps {
   transactions: CategorizedTransaction[];
   selectedCurrency: CurrencyCode; // Add currency prop
+  isLoading: boolean; // Use the isLoading prop from parent
 }
 
 // Define chart colors - Ensure these map to globals.css or define directly
@@ -62,7 +62,7 @@ const createChartConfig = (summary: ExpenseSummary[]): ChartConfig => {
       };
     }
   });
-   // Add 'Other' if not present but transactions exist
+   // Add 'Other' if not present but expenses exist
    if (summary.length > 0 && !config['Other']) {
       config['Other'] = { label: 'Other', color: chartColors['Other'] };
    }
@@ -70,12 +70,7 @@ const createChartConfig = (summary: ExpenseSummary[]): ChartConfig => {
 };
 
 
-export function ExpenseDashboard({ transactions, selectedCurrency }: ExpenseDashboardProps) {
-
-   // Determine if transactions are still loading (any category is null and data exists)
-   const isLoading = useMemo(() => {
-     return transactions.length > 0 && transactions.some(tx => tx.category === null);
-   }, [transactions]);
+export function ExpenseDashboard({ transactions, selectedCurrency, isLoading }: ExpenseDashboardProps) {
 
   const expenseSummary = useMemo((): ExpenseSummary[] => {
      // Don't calculate summary while initial AI categorization might be running
@@ -106,87 +101,76 @@ export function ExpenseDashboard({ transactions, selectedCurrency }: ExpenseDash
 
    const chartConfig = useMemo(() => createChartConfig(expenseSummary), [expenseSummary]);
 
+   const chartHeight = "280px"; // Define chart height once
+
   return (
-    <Card className="shadow-md h-full"> {/* Ensure card takes full height */}
+    <Card className="shadow-md h-full bg-card"> {/* Ensure card takes full height and uses card background */}
       <CardHeader>
-        <CardTitle>Monthly Expense Dashboard</CardTitle>
+        <CardTitle className="text-xl">Expense Dashboard</CardTitle> {/* Slightly larger title */}
          <CardDescription>
-            {isLoading ? (
-               <Skeleton className="h-5 w-32" /> /* Skeleton for total */
+            {isLoading && expenseSummary.length === 0 ? ( // Show skeleton only when truly loading initial data
+               <Skeleton className="h-5 w-40" /> /* Skeleton for total */
             ) : (
                `Total Expenses: ${formatCurrency(totalExpenses, selectedCurrency)}`
             )}
           </CardDescription>
       </CardHeader>
-      <CardContent>
-         {isLoading ? (
-             <div className="flex flex-col items-center justify-center h-[250px] space-y-2"> {/* Match chart height */}
-               <Skeleton className="h-32 w-32 rounded-full" />
+      <CardContent className="pt-2"> {/* Reduced top padding */}
+         {isLoading && expenseSummary.length === 0 ? ( // Show loading skeleton only when initially loading
+             <div className={`flex flex-col items-center justify-center h-[${chartHeight}] space-y-3`}> {/* Match chart height */}
+               <Skeleton className="h-36 w-36 rounded-full" />
                <Skeleton className="h-4 w-48" />
-                <p className="text-sm text-muted-foreground">Categorizing expenses...</p>
+               <p className="text-sm text-muted-foreground pt-1">Categorizing expenses...</p>
              </div>
-           ) : expenseSummary.length === 0 ? (
-           <div className="flex flex-col items-center justify-center h-[250px] text-center"> {/* Match chart height */}
-              <svg
-                 xmlns="http://www.w3.org/2000/svg"
-                 width="24"
-                 height="24"
-                 viewBox="0 0 24 24"
-                 fill="none"
-                 stroke="currentColor"
-                 strokeWidth="2"
-                 strokeLinecap="round"
-                 strokeLinejoin="round"
+           ) : transactions.filter(tx => tx.amount < 0).length === 0 ? ( // Check if there are any actual expenses
+           <div className={`flex flex-col items-center justify-center h-[${chartHeight}] text-center`}> {/* Match chart height */}
+              <Activity
                  className="h-12 w-12 text-muted-foreground opacity-30 mb-4"
-               >
-                 <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-                 <path d="M7 8h10"></path>
-                 <path d="M7 12h5"></path>
-                 <path d="M10 16h4"></path>
-                 <path d="m17.5 13.5-1.8 1.8-1.7-1.7"></path>
-                 <path d="M14 16h.01"></path>
-               </svg>
-               <p className="text-muted-foreground">
+                 strokeWidth={1.5}
+               />
+               <p className="text-muted-foreground font-medium">
                  No expense data to display.
                </p>
-                <p className="text-sm text-muted-foreground/80">
-                  Upload a transaction file first.
+                <p className="text-sm text-muted-foreground/80 mt-1">
+                  Upload a statement or ensure it contains expense transactions.
                 </p>
             </div>
          ) : (
           <Tabs defaultValue="bar">
-            <TabsList className="grid w-full grid-cols-2 mb-4"> {/* Add margin bottom */}
-              <TabsTrigger value="bar"><BarChart className="mr-2 h-4 w-4" />Bar</TabsTrigger>
-              <TabsTrigger value="pie"><PieChart className="mr-2 h-4 w-4" />Pie</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-5"> {/* Increased margin bottom */}
+              <TabsTrigger value="bar"><BarChart className="mr-2 h-4 w-4" />Bar Chart</TabsTrigger>
+              <TabsTrigger value="pie"><PieChart className="mr-2 h-4 w-4" />Pie Chart</TabsTrigger>
             </TabsList>
             <TabsContent value="bar">
                {/* Add explicit height for ChartContainer */}
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
+              <ChartContainer config={chartConfig} className={`h-[${chartHeight}] w-full`}>
                 <RechartsBarChart
                    accessibilityLayer
                    data={expenseSummary}
                    layout="vertical"
-                   margin={{ left: 10, right: 30, top: 10, bottom: 10 }} // Adjusted margins
+                   margin={{ left: 0, right: 30, top: 5, bottom: 10 }} // Adjusted margins, less left margin
                 >
-                   <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                   <CartesianGrid horizontal={false} strokeDasharray="2 3" opacity={0.5} />
                   <XAxis type="number" dataKey="total" hide />
                   <YAxis
                      dataKey="category"
                      type="category"
                      tickLine={false}
-                     tickMargin={10}
+                     tickMargin={8} // Reduced tick margin
                      axisLine={false}
-                     tickFormatter={(value) => chartConfig[value]?.label || value}
-                     width={80} // Adjust width for labels if needed
+                     tickFormatter={(value) => {
+                       const label = chartConfig[value]?.label || value;
+                       return typeof label === 'string' ? (label.length > 10 ? label.substring(0, 10) + '...' : label) : label;
+                     }}
+                     width={80} // Ensure enough width for labels
                    />
                   <ChartTooltip
                      cursor={false}
-                     content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(value as number, selectedCurrency)} />} // Format currency in tooltip
+                     content={<ChartTooltipContent hideLabel formatter={(value, name) => `${chartConfig[name]?.label}: ${formatCurrency(value as number, selectedCurrency)}`} />} // Format currency in tooltip, show label
                    />
-                   {/* <RechartsLegend content={<ChartLegendContent />} /> */}
                    <Bar dataKey="total" layout="vertical" radius={4}> {/* Slightly rounded bars */}
                       {expenseSummary.map((entry) => (
-                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={chartConfig[entry.category]?.label as string} /> // Pass name for tooltip/legend
+                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={entry.category} /> // Pass category as name
                       ))}
                     </Bar>
                 </RechartsBarChart>
@@ -194,30 +178,31 @@ export function ExpenseDashboard({ transactions, selectedCurrency }: ExpenseDash
              </TabsContent>
              <TabsContent value="pie">
                {/* Add explicit height for ChartContainer */}
-               <ChartContainer config={chartConfig} className="h-[250px] w-full">
+               <ChartContainer config={chartConfig} className={`h-[${chartHeight}] w-full`}>
                  <RechartsPieChart>
                    <ChartTooltip
                      cursor={false}
-                     content={<ChartTooltipContent hideLabel formatter={(value) => formatCurrency(value as number, selectedCurrency)} />} // Format currency in tooltip
+                      content={<ChartTooltipContent hideLabel formatter={(value, name) => `${chartConfig[name]?.label}: ${formatCurrency(value as number, selectedCurrency)}`} />} // Format currency in tooltip, show label
                    />
                    <Pie
                      data={expenseSummary}
                      dataKey="total"
                      nameKey="category"
-                     innerRadius={50} // Slightly smaller inner radius
-                     outerRadius={80} // Slightly smaller outer radius
-                     strokeWidth={3}
+                     innerRadius={60} // Slightly larger inner radius
+                     outerRadius={90} // Slightly larger outer radius
+                     paddingAngle={2} // Add padding between slices
+                     strokeWidth={1} // Thinner stroke
                      startAngle={90}
                      endAngle={-270} // Animate clockwise
                    >
                      {expenseSummary.map((entry) => (
-                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={chartConfig[entry.category]?.label as string} /> // Pass name for tooltip/legend
+                        <Cell key={`cell-${entry.category}`} fill={entry.fill} name={entry.category} stroke={entry.fill} /> // Pass name for tooltip/legend
                       ))}
                    </Pie>
                    <RechartsLegend
-                     content={<ChartLegendContent nameKey="category" className="text-xs"/>} // Smaller legend text
+                     content={<ChartLegendContent nameKey="category" className="text-xs flex-wrap justify-center gap-x-4 gap-y-1"/>} // Allow wrapping, add gaps
                      verticalAlign="bottom"
-                     wrapperStyle={{ paddingTop: '20px' }} // Add padding above legend
+                     wrapperStyle={{ paddingTop: '15px', paddingBottom: '0px' }} // Adjust padding
                     />
                  </RechartsPieChart>
                </ChartContainer>

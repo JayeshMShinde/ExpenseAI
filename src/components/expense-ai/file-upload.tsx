@@ -34,7 +34,7 @@ export function FileUpload({
         setSelectedFile(file);
          toast({
            title: 'File Selected',
-           description: `Ready to upload: ${file.name}`,
+           description: `Ready to process: ${file.name}`, // Changed wording
          });
       } else {
         toast({
@@ -77,6 +77,7 @@ export function FileUpload({
       const parsedTransactions = await parseBankStatement(selectedFile, fileType);
       const transactionsWithIds = parsedTransactions.map(tx => ({
           ...tx,
+          // Ensure robust ID generation (consider UUID in a real app)
           id: `tx-${Date.now()}-${counter++}`,
       }));
 
@@ -89,24 +90,22 @@ export function FileUpload({
       toast({
         title: 'Parsing Error',
         description:
-          `Failed to parse ${selectedFile.name}. Please check the file format or try again.`,
+          error instanceof Error ? error.message : `Failed to parse ${selectedFile.name}. Please check the file format or try again.`, // Show error message if available
         variant: 'destructive',
       });
       onTransactionsParsed([]); // Clear transactions on error
       setIsLoading(false); // Stop loading on error using parent's setter
-       // Optionally clear selection on error too, or let user retry
-       // clearSelection();
     }
-    // setIsLoading(false) is now handled in the parent component after AI categorization attempt
+    // setIsLoading(false) is handled in the parent component after AI categorization attempt
   };
 
   return (
-    <Card className="shadow-sm h-full border border-border/80 hover:shadow-md transition-shadow duration-200"> {/* Add subtle border and hover effect */}
+    <Card className="shadow-sm h-full border border-border/70 hover:shadow-md transition-shadow duration-200 bg-card"> {/* Use card bg, slightly more subtle border */}
        <CardHeader>
-          <CardTitle className="text-lg">Upload Statement</CardTitle> {/* Slightly smaller title */}
+          <CardTitle className="text-xl">Upload Statement</CardTitle> {/* Slightly larger title */}
           <CardDescription>Select a CSV or PDF bank statement file.</CardDescription>
        </CardHeader>
-       <CardContent className="space-y-4">
+       <CardContent className="space-y-4 pt-2"> {/* Reduced top padding */}
          <div className="grid w-full items-center gap-2">
            <Label htmlFor="bank-statement" className="sr-only"> {/* Hide label visually, still accessible */}
               Select File (CSV or PDF)
@@ -118,14 +117,14 @@ export function FileUpload({
              accept=".csv,.pdf"
              onChange={handleFileChange}
              disabled={isLoading}
-             className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90 cursor-pointer text-muted-foreground" // Use secondary color for file button, subtle text color
+             className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border file:border-input file:text-sm file:font-medium file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90 cursor-pointer text-muted-foreground" // Updated file button style
            />
          </div>
           {selectedFile && !isLoading && ( // Only show clear selection if not loading
-            <div className="flex items-center justify-between rounded-md border border-border/50 bg-muted/30 p-2 px-3"> {/* Lighter background */}
+            <div className="flex items-center justify-between rounded-md border border-border/60 bg-secondary/50 p-2 px-3"> {/* Lighter background, subtler border */}
               <div className="flex items-center gap-2 text-sm overflow-hidden"> {/* Prevent overflow */}
                 <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <span className="font-medium truncate" title={selectedFile.name}>{selectedFile.name}</span> {/* Add title for full name */}
+                <span className="font-medium truncate text-foreground/90" title={selectedFile.name}>{selectedFile.name}</span> {/* Add title for full name, slightly darker text */}
               </div>
               <Button
                 variant="ghost"

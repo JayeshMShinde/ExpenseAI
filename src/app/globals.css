@@ -8,75 +8,84 @@ body {
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* Light Gray */
-    --foreground: 240 10% 3.9%; /* Dark Gray */
-    --card: 210 40% 98%; /* Light Gray */
-    --card-foreground: 240 10% 3.9%; /* Dark Gray */
-    --popover: 210 40% 98%; /* Light Gray */
-    --popover-foreground: 240 10% 3.9%; /* Dark Gray */
-    --primary: 240 5.9% 10%; /* Default Dark */
-    --primary-foreground: 0 0% 98%; /* Default Light */
-    --secondary: 210 43% 80%; /* Soft Blue */
-    --secondary-foreground: 240 5.9% 10%; /* Dark Gray on Soft Blue */
-    --muted: 210 40% 96.1%; /* Slightly darker gray */
-    --muted-foreground: 240 5% 64.9%; /* Lighter Gray */
-    --accent: 120 61% 50%; /* Green */
-    --accent-foreground: 0 0% 100%; /* White on Green */
-    --destructive: 0 84.2% 60.2%; /* Default Red */
-    --destructive-foreground: 0 0% 98%; /* Default Light on Red */
-    --border: 210 40% 90%; /* Slightly softer border */
-    --input: 210 40% 91.4%; /* Lighter input */
-    --ring: 210 43% 60%; /* Ring based on Soft Blue */
-    --chart-1: 210 43% 60%; /* Soft Blue - Food */
-    --chart-2: 120 61% 40%; /* Darker Green - Transport */
-    --chart-3: 200 50% 50%; /* Another Blue - Bills */
-    --chart-4: 40 70% 60%; /* Orange/Yellow - Entertainment */
-    --chart-5: 300 50% 60%; /* Purple - Shopping */
+    /* Professional Cool Palette (Light) */
+    --background: 210 20% 98%; /* Very Light Cool Gray */
+    --foreground: 220 15% 25%; /* Dark Slate Blue/Gray */
+    --card: 210 20% 98%; /* Match Background */
+    --card-foreground: 220 15% 25%; /* Match Foreground */
+    --popover: 210 20% 98%; /* Match Background */
+    --popover-foreground: 220 15% 25%; /* Match Foreground */
+    --primary: 220 60% 55%; /* Medium Professional Blue */
+    --primary-foreground: 210 40% 98%; /* Light Gray for contrast */
+    --secondary: 210 30% 90%; /* Light Cool Gray */
+    --secondary-foreground: 220 15% 25%; /* Dark text for contrast */
+    --muted: 210 20% 94%; /* Slightly Darker Gray */
+    --muted-foreground: 220 10% 55%; /* Mid Gray */
+    --accent: 145 55% 45%; /* Muted Green */
+    --accent-foreground: 0 0% 100%; /* White */
+    --destructive: 0 84% 60%; /* Standard Red */
+    --destructive-foreground: 0 0% 98%; /* Light */
+    --border: 210 20% 88%; /* Subtle Border */
+    --input: 210 20% 92%; /* Slightly off background */
+    --ring: 220 60% 65%; /* Based on Primary */
+
+    /* Chart Colors (Light) */
+    --chart-1: 220 60% 55%; /* Primary Blue */
+    --chart-2: 145 55% 45%; /* Accent Green */
+    --chart-3: 170 50% 45%; /* Teal */
+    --chart-4: 35 70% 55%;  /* Orange/Yellow */
+    --chart-5: 260 50% 60%; /* Purple */
+
     --radius: 0.5rem;
-    /* Sidebar variables, adjust if needed */
-    --sidebar-background: 210 40% 96%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 210 43% 60%; /* Soft Blue */
-    --sidebar-primary-foreground: 240 5.9% 10%;
-    --sidebar-accent: 210 40% 90%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 210 40% 88%;
-    --sidebar-ring: 210 43% 50%;
+
+    /* Sidebar variables - Using main theme colors for consistency */
+    --sidebar-background: hsl(var(--muted)); /* Use muted for sidebar bg */
+    --sidebar-foreground: hsl(var(--muted-foreground)); /* Use muted-foreground */
+    --sidebar-primary: hsl(var(--primary)); /* Use primary */
+    --sidebar-primary-foreground: hsl(var(--primary-foreground)); /* Use primary-foreground */
+    --sidebar-accent: hsl(var(--secondary)); /* Use secondary for accent areas */
+    --sidebar-accent-foreground: hsl(var(--secondary-foreground)); /* Use secondary-foreground */
+    --sidebar-border: hsl(var(--border)); /* Use border */
+    --sidebar-ring: hsl(var(--ring)); /* Use ring */
   }
   .dark {
-    --background: 240 10% 3.9%; /* Dark Gray */
-    --foreground: 210 40% 98%; /* Light Gray */
-    --card: 240 10% 3.9%; /* Dark Gray */
-    --card-foreground: 210 40% 98%; /* Light Gray */
-    --popover: 240 10% 3.9%; /* Dark Gray */
-    --popover-foreground: 210 40% 98%; /* Light Gray */
-    --primary: 0 0% 98%; /* Default Light */
-    --primary-foreground: 240 5.9% 10%; /* Default Dark */
-    --secondary: 210 43% 30%; /* Darker Soft Blue */
-    --secondary-foreground: 210 40% 98%; /* Light Gray on Dark Blue */
-    --muted: 240 3.7% 15.9%; /* Darker Gray */
-    --muted-foreground: 240 5% 64.9%; /* Lighter Gray */
-    --accent: 120 61% 30%; /* Darker Green */
-    --accent-foreground: 0 0% 100%; /* White on Dark Green */
-    --destructive: 0 62.8% 30.6%; /* Darker Red */
-    --destructive-foreground: 0 0% 98%; /* Default Light on Red */
-    --border: 240 3.7% 20%; /* Slightly softer border */
-    --input: 240 3.7% 15.9%; /* Darker input */
-    --ring: 210 43% 40%; /* Ring based on Darker Soft Blue */
-    --chart-1: 210 43% 70%; /* Lighter Soft Blue */
-    --chart-2: 120 61% 60%; /* Lighter Green */
-    --chart-3: 200 50% 70%; /* Lighter Another Blue */
-    --chart-4: 40 70% 70%; /* Lighter Orange/Yellow */
-    --chart-5: 300 50% 70%; /* Lighter Purple */
-    /* Sidebar variables, adjust if needed */
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 210 43% 40%; /* Darker Soft Blue */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 210 43% 30%;
+     /* Professional Cool Palette (Dark) */
+    --background: 220 15% 10%; /* Dark Slate */
+    --foreground: 210 20% 95%; /* Light Gray */
+    --card: 220 15% 15%; /* Slightly Lighter Dark */
+    --card-foreground: 210 20% 95%; /* Light Gray */
+    --popover: 220 15% 15%; /* Match Card */
+    --popover-foreground: 210 20% 95%; /* Light Gray */
+    --primary: 220 70% 75%; /* Lighter Blue */
+    --primary-foreground: 220 15% 15%; /* Dark Text */
+    --secondary: 210 20% 30%; /* Darker Muted Blue/Gray */
+    --secondary-foreground: 210 20% 95%; /* Light Gray */
+    --muted: 220 15% 20%; /* Darker Gray */
+    --muted-foreground: 210 15% 65%; /* Lighter Mid-Gray */
+    --accent: 145 60% 60%; /* Brighter Green */
+    --accent-foreground: 145 90% 10%; /* Dark Text */
+    --destructive: 0 70% 65%; /* Lighter Red */
+    --destructive-foreground: 0 100% 10%; /* Dark Text */
+    --border: 210 15% 25%; /* Dark Subtle Border */
+    --input: 220 15% 18%; /* Darker than Card */
+    --ring: 220 70% 80%; /* Lighter Primary Blue */
+
+    /* Chart Colors (Dark) */
+    --chart-1: 220 70% 75%; /* Lighter Blue */
+    --chart-2: 145 60% 60%; /* Brighter Green */
+    --chart-3: 170 60% 60%; /* Lighter Teal */
+    --chart-4: 35 80% 65%;  /* Lighter Orange/Yellow */
+    --chart-5: 260 60% 70%; /* Lighter Purple */
+
+    /* Sidebar variables - Using main theme colors for consistency */
+    --sidebar-background: hsl(var(--muted)); /* Use muted for sidebar bg */
+    --sidebar-foreground: hsl(var(--muted-foreground)); /* Use muted-foreground */
+    --sidebar-primary: hsl(var(--primary)); /* Use primary */
+    --sidebar-primary-foreground: hsl(var(--primary-foreground)); /* Use primary-foreground */
+    --sidebar-accent: hsl(var(--secondary)); /* Use secondary for accent areas */
+    --sidebar-accent-foreground: hsl(var(--secondary-foreground)); /* Use secondary-foreground */
+    --sidebar-border: hsl(var(--border)); /* Use border */
+    --sidebar-ring: hsl(var(--ring)); /* Use ring */
   }
 }
 

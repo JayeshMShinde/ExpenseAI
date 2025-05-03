@@ -29,6 +29,7 @@ interface TransactionTableProps {
   isUpdatingCategory: boolean; // Global update state (for disabling inputs)
   selectedCurrency: CurrencyCode; // Add currency prop
   isInitialLoading: boolean; // Add prop for initial loading state
+  isRowSaving: boolean; // Add this prop
 }
 
 // Predefined category options (can be expanded)
@@ -41,13 +42,14 @@ export function TransactionTable({
   isUpdatingCategory,
   selectedCurrency,
   isInitialLoading, // Destructure the prop
+  isRowSaving, // Destructure the new prop
 }: TransactionTableProps) {
   const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [editedCategory, setEditedCategory] = useState<string>('');
 
   const handleEditClick = (transaction: CategorizedTransaction) => {
     // Prevent editing if already saving another row or during initial load
-    if ((isUpdatingCategory && editingRowId !== transaction.id) || isInitialLoading) return;
+    if ((isRowSaving && editingRowId !== transaction.id) || isInitialLoading) return;
     setEditingRowId(transaction.id);
     setEditedCategory(transaction.category || '');
   };
@@ -71,13 +73,13 @@ export function TransactionTable({
    // More distinct badge variants using background colors from the theme
    const getCategoryBadgeVariant = (category: string | null): "default" | "secondary" | "destructive" | "outline" | "accent" | "muted" => {
      switch(category?.toLowerCase()) {
-       case 'income': return 'accent'; // Green for income
-       case 'food': return 'default'; // Using primary (dark) for food
-       case 'transport': return 'secondary'; // Soft blue
-       case 'bills': return 'destructive'; // Red for bills
-       case 'entertainment': return 'outline'; // Outline variant
-       case 'shopping': return 'default'; // Primary again, consider adding more variants/colors if needed
-       case 'other': return 'muted'; // Muted variant
+       case 'income': return 'accent'; // Use accent (green) for income
+       case 'food': return 'default'; // Primary (blue)
+       case 'transport': return 'secondary'; // Light cool gray
+       case 'bills': return 'destructive'; // Red
+       case 'entertainment': return 'outline'; // Outline
+       case 'shopping': return 'default'; // Primary again
+       case 'other': return 'muted'; // Muted gray
        default: return 'muted'; // Muted for uncategorized or null
      }
    }
@@ -100,7 +102,7 @@ export function TransactionTable({
          {/* Set a fixed height for the scroll area */}
        <ScrollArea className="h-[450px] w-full border rounded-md">
         <Table>
-          <TableHeader className="sticky top-0 bg-card z-10">
+          <TableHeader>
             <TableRow>
               <TableHead className="w-[100px]">Date</TableHead>
               <TableHead>Description</TableHead>
@@ -132,13 +134,13 @@ export function TransactionTable({
                  const isEditingCurrent = editingRowId === transaction.id;
                  const isLoadingCurrent = loadingCategories.has(transaction.id);
                  // Disable edit/save actions if initial loading, or if another row is being saved
-                 const isDisabled = isInitialLoading || (isUpdatingCategory && !isEditingCurrent);
+                 const isDisabled = isInitialLoading || (isRowSaving && !isLoadingCurrent); // Use isRowSaving
 
                  return (
                    <TableRow key={transaction.id} className={isLoadingCurrent ? 'opacity-60' : ''} aria-disabled={isDisabled}>
                      <TableCell className="text-muted-foreground">{formatDate(transaction.date)}</TableCell>
                      <TableCell className="font-medium max-w-[250px] truncate" title={transaction.description}>{transaction.description}</TableCell>
-                     <TableCell className={`text-right font-mono ${transaction.amount >= 0 ? 'text-green-600 dark:text-green-400' : ''}`}>
+                      <TableCell className={`text-right font-mono ${transaction.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {formatCurrency(transaction.amount, selectedCurrency)} {/* Use formatter */}
                       </TableCell>
                      <TableCell>
@@ -156,29 +158,29 @@ export function TransactionTable({
                        ) : (
                          <Badge
                            variant={getCategoryBadgeVariant(transaction.category)}
-                           className="flex items-center justify-center w-fit" // Ensure badge fits content
+                           className="flex items-center justify-center w-fit capitalize" // Capitalize category name
                          >
-                            {/* Show loader inside badge if only this category is loading (and not initial load) */}
+                            {/* Show loader inside badge if only this category is loading (and not part of a global save) */}
                            {isLoadingCurrent && !isUpdatingCategory && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                           {transaction.category || 'Uncategorized'}
+                           {transaction.category?.toLowerCase() || 'uncategorized'}
                          </Badge>
                        )}
                      </TableCell>
                      <TableCell className="text-center">
                        {isEditingCurrent ? (
                          <div className="flex justify-center gap-1">
-                           <Button variant="ghost" size="icon" onClick={() => handleSaveClick(transaction.id)} className="h-7 w-7 text-green-600 hover:bg-green-100 dark:hover:bg-green-900/50" disabled={isLoadingCurrent || isDisabled}>
+                           <Button variant="ghost" size="icon" onClick={() => handleSaveClick(transaction.id)} className="h-7 w-7 text-accent hover:bg-accent/10" disabled={isLoadingCurrent || isDisabled}>
                              {isLoadingCurrent ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                              <span className="sr-only">Save</span>
                            </Button>
-                           <Button variant="ghost" size="icon" onClick={handleCancelClick} className="h-7 w-7 text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800" disabled={isLoadingCurrent || isDisabled}>
+                           <Button variant="ghost" size="icon" onClick={handleCancelClick} className="h-7 w-7 text-muted-foreground hover:bg-muted/50" disabled={isLoadingCurrent || isDisabled}>
                              <XCircle className="h-4 w-4" />
                              <span className="sr-only">Cancel</span>
                            </Button>
                          </div>
                        ) : (
                          <Button variant="ghost" size="icon" onClick={() => handleEditClick(transaction)} className="h-7 w-7" disabled={isDisabled || isLoadingCurrent}>
-                            {/* Show spinner if loading this specific category (and not initial load) */}
+                            {/* Show spinner if loading this specific category (and not part of global save) */}
                            {isLoadingCurrent && !isUpdatingCategory ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : <Edit2 className="h-4 w-4" />}
                            <span className="sr-only">Edit</span>
                          </Button>
