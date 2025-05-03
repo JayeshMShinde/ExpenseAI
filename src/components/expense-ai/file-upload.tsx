@@ -14,13 +14,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 
 interface FileUploadProps {
   onTransactionsParsed: (transactions: Transaction[]) => void;
-  setLoading: (loading: boolean) => void; // Accept setLoading from parent
+  setIsLoading: (loading: boolean) => void; // Accept setIsLoading from parent
   isLoading: boolean; // Accept isLoading from parent
 }
 
 export function FileUpload({
   onTransactionsParsed,
-  setLoading, // Use the passed setLoading
+  setIsLoading, // Use the passed setIsLoading
   isLoading, // Use the passed isLoading
 }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -69,7 +69,7 @@ export function FileUpload({
       return;
     }
 
-    setLoading(true); // Indicate start of processing using parent's state setter
+    setIsLoading(true); // Indicate start of processing using parent's state setter
     try {
       const fileType = selectedFile.type === 'text/csv' ? 'csv' : 'pdf';
       // Add unique IDs to transactions (simple incrementing for now)
@@ -93,17 +93,17 @@ export function FileUpload({
         variant: 'destructive',
       });
       onTransactionsParsed([]); // Clear transactions on error
-      setLoading(false); // Stop loading on error using parent's setter
+      setIsLoading(false); // Stop loading on error using parent's setter
        // Optionally clear selection on error too, or let user retry
        // clearSelection();
     }
-    // setLoading(false) is now handled in the parent component after AI categorization attempt
+    // setIsLoading(false) is now handled in the parent component after AI categorization attempt
   };
 
   return (
-    <Card className="shadow-md h-full"> {/* Ensure card takes full height */}
+    <Card className="shadow-sm h-full border border-border/80 hover:shadow-md transition-shadow duration-200"> {/* Add subtle border and hover effect */}
        <CardHeader>
-          <CardTitle>Upload Statement</CardTitle>
+          <CardTitle className="text-lg">Upload Statement</CardTitle> {/* Slightly smaller title */}
           <CardDescription>Select a CSV or PDF bank statement file.</CardDescription>
        </CardHeader>
        <CardContent className="space-y-4">
@@ -118,28 +118,28 @@ export function FileUpload({
              accept=".csv,.pdf"
              onChange={handleFileChange}
              disabled={isLoading}
-             className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer" // Styled input
+             className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90 cursor-pointer text-muted-foreground" // Use secondary color for file button, subtle text color
            />
          </div>
           {selectedFile && !isLoading && ( // Only show clear selection if not loading
-            <div className="flex items-center justify-between rounded-md border bg-muted/50 p-3">
-              <div className="flex items-center gap-2 text-sm">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium truncate max-w-[180px]">{selectedFile.name}</span>
+            <div className="flex items-center justify-between rounded-md border border-border/50 bg-muted/30 p-2 px-3"> {/* Lighter background */}
+              <div className="flex items-center gap-2 text-sm overflow-hidden"> {/* Prevent overflow */}
+                <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="font-medium truncate" title={selectedFile.name}>{selectedFile.name}</span> {/* Add title for full name */}
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                className="h-6 w-6 text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex-shrink-0" // Ensure button doesn't shrink
                 onClick={clearSelection}
                 disabled={isLoading}
+                aria-label="Clear file selection" // Accessibility
                >
                  <X className="h-4 w-4" />
-                 <span className="sr-only">Clear selection</span>
                </Button>
             </div>
           )}
-         <Button onClick={handleUpload} disabled={!selectedFile || isLoading} className="w-full">
+         <Button onClick={handleUpload} disabled={!selectedFile || isLoading} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"> {/* Primary button */}
            {isLoading ? (
              <>
                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
