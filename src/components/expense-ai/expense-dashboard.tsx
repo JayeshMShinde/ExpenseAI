@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart, PieChart, Activity, TrendingUp, ArrowDown } from 'lucide-react'; // Added icons
+import { BarChart, PieChart, Activity, TrendingUp, ArrowDown, Loader2 } from 'lucide-react'; // Added Loader2 import
 import {
   Bar,
   CartesianGrid,
@@ -251,7 +251,7 @@ export function ExpenseDashboard({ transactions, selectedCurrency, isLoading, se
                   layout="vertical"
                   margin={{ left: 0, right: 30, top: 5, bottom: 10 }}
                   barGap={4}
-                  animationDuration={800}
+                  // Removed animationDuration as it's not a valid prop
                 >
                   <CartesianGrid horizontal={false} strokeDasharray="3 3" opacity={0.4} />
                   <XAxis type="number" dataKey="total" hide />
@@ -281,6 +281,7 @@ export function ExpenseDashboard({ transactions, selectedCurrency, isLoading, se
                     layout="vertical" 
                     radius={[0, 4, 4, 0]}
                     isAnimationActive={true}
+                    animationDuration={800} // Move animationDuration to the Bar component
                   >
                     {expenseSummary.map((entry) => (
                       <Cell key={`cell-${entry.category}`} fill={entry.fill} name={entry.category} />
